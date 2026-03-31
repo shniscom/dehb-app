@@ -18,9 +18,5 @@ RUN mkdir -p /app/data
 # Port
 EXPOSE 3000
 
-# Sağlık kontrolü
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-  CMD wget -qO- http://localhost:3000/health || exit 1
-
 # Başlat
 CMD ["node", "backend/server.js"]
