@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Görev Kahramanı</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0e17;
+  --surface: #1a1828;
+  --surface2: #232135;
+  --border: rgba(255,255,255,0.08);
+  --text: #f2f0ff;
+  --muted: rgba(242,240,255,0.5);
+  --purple: #7c5cbf;
+  --purple-light: #a87fff;
+  --purple-glow: rgba(168,127,255,0.25);
+  --teal: #3ecfb2;
+  --teal-glow: rgba(62,207,178,0.2);
+  --amber: #ffb347;
+  --amber-glow: rgba(255,179,71,0.2);
+  --coral: #ff6b6b;
+  --coral-glow: rgba(255,107,107,0.2);
+  --green: #4ade80;
+  --green-glow: rgba(74,222,128,0.2);
+  --blue: #60a5fa;
+  --radius: 20px;
+  --radius-sm: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BACKGROUND STARS ── */
+.stars {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  overflow: hidden;
+}
+.star {
+  position: absolute; border-radius: 50%;
+  background: white; opacity: 0;
+  animation: twinkle var(--d) ease-in-out infinite var(--delay);
+}
+@keyframes twinkle {
+  0%,100%{opacity:0} 50%{opacity:var(--op)}
+}
+
+/* ── MODE SWITCHER ── */
+.mode-bar {
+  position: fixed; top: 16px; right: 16px; z-index: 100;
+  display: flex; gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 4px;
+}
+.mode-btn {
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px; font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 30px; border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer; transition: all .2s;
+  letter-spacing: .02em;
+}
+.mode-btn.active {
+  background: var(--purple);
+  color: white;
+}
+
+/* ── WRAPPER ── */
+.app-wrapper {
+  position: relative; z-index: 1;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 20px 16px 120px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; padding-top: 12px;
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.avatar-ring {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  border: 2px solid var(--purple-light);
+  padding: 2px;
+  box-shadow: 0 0 12px var(--purple-glow);
+  position: relative;
+}
+.avatar-inner {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c5cbf, #3ecfb2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; line-height:1;
+}
+.greeting h2 {
+  font-size: 16px; font-weight: 800;
+  line-height: 1.2;
+}
+.greeting p {
+  font-size: 12px; color: var(--muted); font-weight: 600;
+}
+.header-right { display: flex; align-items: center; gap: 8px; }
+.points-badge {
+  background: var(--surface2);
+  border: 1px solid var(--purple);
+  border-radius: 30px;
+  padding: 6px 12px;
+  display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 0 10px var(--purple-glow);
+}
+.points-star { font-size: 14px; line-height:1; }
+.points-val {
+  font-size: 16px; font-weight: 900;
+  color: var(--amber);
+  transition: all .3s;
+}
+
+/* ── STREAK ── */
+.streak-bar {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 20px;
+}
+.streak-fire { font-size: 20px; line-height:1; animation: pulse-fire 1.4s ease-in-out infinite; }
+@keyframes pulse-fire { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+.streak-text { flex:1; }
+.streak-text strong { font-size: 13px; font-weight: 800; color: var(--amber); }
+.streak-text span { font-size: 11px; color: var(--muted); display: block; }
+.streak-dots { display: flex; gap: 4px; }
+.streak-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  transition: all .3s;
+}
+.streak-dot.done {
+  background: var(--amber);
+  border-color: var(--amber);
+  box-shadow: 0 0 6px var(--amber-glow);
+}
+
+/* ── PROGRESS ── */
+.progress-section { margin-bottom: 20px; }
+.progress-header {
+  display: flex; justify-content: space-between;
+  font-size: 12px; font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.progress-header span:last-child { color: var(--teal); }
+.progress-track {
+  height: 10px; background: var(--surface2);
+  border-radius: 10px; overflow: hidden;
+  position: relative;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--purple-light), var(--teal));
+  box-shadow: 0 0 8px var(--teal-glow);
+  transition: width 1s cubic-bezier(.4,0,.2,1);
+  position: relative;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 16px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 10px;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+@keyframes shimmer { 0%,100%{opacity:0} 50%{opacity:1} }
+
+/* ── CATEGORY FILTER ── */
+.cat-scroll {
+  display: flex; gap: 8px;
+  overflow-x: auto; padding-bottom: 4px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+}
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-chip {
+  flex-shrink: 0;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px; font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 30px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer; transition: all .2s;
+  white-space: nowrap;
+}
+.cat-chip.active {
+  color: white;
+  border-color: transparent;
+}
+.cat-chip[data-cat="all"].active    { background: var(--purple); box-shadow: 0 0 12px var(--purple-glow); }
+.cat-chip[data-cat="rutin"].active  { background: var(--teal);   box-shadow: 0 0 12px var(--teal-glow); color:#0f0e17; }
+.cat-chip[data-cat="ev"].active     { background: var(--amber);  box-shadow: 0 0 12px var(--amber-glow); color:#0f0e17; }
+.cat-chip[data-cat="okul"].active   { background: var(--blue);   box-shadow: 0 0 12px rgba(96,165,250,.3); }
+.cat-chip[data-cat="hareket"].active{ background: var(--coral);  box-shadow: 0 0 12px var(--coral-glow); }
+
+/* ── SECTION TITLE ── */
+.section-title {
+  font-size: 13px; font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 12px;
+}
+
+/* ── TASK CARDS ── */
+.tasks-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+
+.task-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: all .25s cubic-bezier(.4,0,.2,1);
+  position: relative;
+  overflow: hidden;
+}
+.task-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0;
+  width: 4px; height: 100%;
+  border-radius: 4px 0 0 4px;
+}
+.task-card[data-color="teal"]::before   { background: var(--teal); }
+.task-card[data-color="amber"]::before  { background: var(--amber); }
+.task-card[data-color="coral"]::before  { background: var(--coral); }
+.task-card[data-color="blue"]::before   { background: var(--blue); }
+.task-card[data-color="purple"]::before { background: var(--purple-light); }
+.task-card[data-color="green"]::before  { background: var(--green); }
+
+.task-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.15); }
+.task-card:active { transform: scale(0.98); }
+
+.task-card.done {
+  opacity: 0.55;
+}
+.task-card.done::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    45deg, transparent, transparent 6px,
+    rgba(255,255,255,0.02) 6px, rgba(255,255,255,0.02) 7px
+  );
+}
+
+.task-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.task-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; line-height:1; flex-shrink: 0;
+}
+.task-card[data-color="teal"]   .task-icon { background: rgba(62,207,178,0.15); }
+.task-card[data-color="amber"]  .task-icon { background: rgba(255,179,71,0.15); }
+.task-card[data-color="coral"]  .task-icon { background: rgba(255,107,107,0.15); }
+.task-card[data-color="blue"]   .task-icon { background: rgba(96,165,250,0.15); }
+.task-card[data-color="purple"] .task-icon { background: rgba(168,127,255,0.15); }
+.task-card[data-color="green"]  .task-icon { background: rgba(74,222,128,0.15); }
+
+.task-info { flex: 1; }
+.task-info h3 {
+  font-size: 15px; font-weight: 800;
+  line-height: 1.3; margin-bottom: 2px;
+}
+.task-info .task-sub {
+  font-size: 11px; color: var(--muted); font-weight: 600;
+}
+.task-check {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+  transition: all .3s;
+}
+.task-card.done .task-check {
+  background: var(--green);
+  border-color: var(--green);
+  box-shadow: 0 0 10px var(--green-glow);
+}
+
+.task-footer { display: flex; align-items: center; gap: 8px; }
+.task-tag {
+  font-size: 11px; font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: var(--surface2);
+}
+.task-card[data-color="teal"]   .task-tag { color: var(--teal); }
+.task-card[data-color="amber"]  .task-tag { color: var(--amber); }
+.task-card[data-color="coral"]  .task-tag { color: var(--coral); }
+.task-card[data-color="blue"]   .task-tag { color: var(--blue); }
+.task-card[data-color="purple"] .task-tag { color: var(--purple-light); }
+.task-card[data-color="green"]  .task-tag { color: var(--green); }
+
+.task-pts {
+  font-size: 12px; font-weight: 800;
+  color: var(--amber);
+  margin-left: auto;
+  display: flex; align-items: center; gap: 3px;
+}
+.task-pts::before { content: '⭐'; font-size: 12px; }
+
+.task-timer-badge {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700;
+  color: var(--muted);
+}
+.task-timer-badge::before { content: '⏱'; font-size: 11px; }
+
+/* ── REWARDS SECTION ── */
+.rewards-section { margin-bottom: 24px; }
+.rewards-scroll {
+  display: flex; gap: 10px;
+  overflow-x: auto; padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.rewards-scroll::-webkit-scrollbar { display: none; }
+.reward-card {
+  flex-shrink: 0; width: 130px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.reward-card:hover { transform: translateY(-2px); }
+.reward-card.locked { opacity: 0.6; }
+.reward-card .r-icon { font-size: 28px; margin-bottom: 6px; display: block; }
+.reward-card .r-name { font-size: 12px; font-weight: 800; line-height: 1.3; margin-bottom: 6px; }
+.reward-progress-bar {
+  height: 6px; background: var(--surface2);
+  border-radius: 6px; overflow: hidden; margin-bottom: 4px;
+}
+.reward-fill {
+  height: 100%; border-radius: 6px;
+  background: linear-gradient(90deg, var(--purple-light), var(--teal));
+  transition: width 1s;
+}
+.reward-pts { font-size: 10px; color: var(--muted); font-weight: 700; }
+.reward-card.unlocked {
+  border-color: var(--green);
+  box-shadow: 0 0 16px var(--green-glow);
+}
+.reward-card.unlocked .r-name { color: var(--green); }
+.reward-lock {
+  position: absolute; top: 8px; right: 8px;
+  font-size: 10px; opacity: 0.4;
+}
+
+/* ── MODAL OVERLAY ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal-sheet {
+  width: 100%; max-width: 420px;
+  background: var(--surface);
+  border-radius: 28px 28px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  padding: 20px 20px 40px;
+  transform: translateY(100%);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+}
+.modal-overlay.open .modal-sheet { transform: translateY(0); }
+
+.modal-handle {
+  width: 36px; height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  margin: 0 auto 20px;
+}
+.modal-task-icon {
+  font-size: 40px; text-align: center;
+  margin-bottom: 12px; display: block;
+}
+.modal-title {
+  font-size: 22px; font-weight: 900;
+  text-align: center; margin-bottom: 4px;
+}
+.modal-sub {
+  font-size: 13px; color: var(--muted);
+  text-align: center; margin-bottom: 20px; font-weight: 600;
+}
+.modal-info-row {
+  display: flex; gap: 8px; margin-bottom: 20px;
+}
+.modal-info-chip {
+  flex: 1; text-align: center;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+}
+.modal-info-chip .mic-val {
+  font-size: 18px; font-weight: 900;
+  color: var(--amber); display: block; margin-bottom: 2px;
+}
+.modal-info-chip .mic-label {
+  font-size: 10px; color: var(--muted); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+
+/* timer */
+.timer-ring-wrap {
+  display: flex; justify-content: center; margin-bottom: 20px;
+}
+.timer-ring {
+  position: relative; width: 120px; height: 120px;
+}
+.timer-svg { transform: rotate(-90deg); }
+.timer-track { fill: none; stroke: var(--surface2); stroke-width: 8; }
+.timer-fill  { fill: none; stroke-width: 8; stroke-linecap: round;
+  transition: stroke-dashoffset .5s linear;
+}
+.timer-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.timer-center .tc-time {
+  font-size: 22px; font-weight: 900; line-height: 1;
+}
+.timer-center .tc-label {
+  font-size: 9px; font-weight: 700;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+}
+
+/* subtasks */
+.subtasks { margin-bottom: 20px; }
+.subtask-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.subtask-item:last-child { border-bottom: none; }
+.subtask-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  transition: all .2s;
+}
+.subtask-item.done .subtask-check {
+  background: var(--green); border-color: var(--green);
+}
+.subtask-item.done span { text-decoration: line-through; color: var(--muted); }
+.subtask-text { font-size: 14px; font-weight: 600; }
+
+.btn-start {
+  width: 100%;
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px; font-weight: 900;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--purple), var(--teal));
+  color: white;
+  box-shadow: 0 4px 20px rgba(168,127,255,0.4);
+  transition: all .2s;
+  letter-spacing: .02em;
+}
+.btn-start:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(168,127,255,0.5); }
+.btn-start:active { transform: scale(0.98); }
+.btn-start.running { background: linear-gradient(135deg, var(--coral), var(--amber)); }
+.btn-start.pending { background: linear-gradient(135deg, var(--teal), var(--green)); }
+
+/* ── APPROVAL MODAL (kalite seçimi) ── */
+.quality-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 16px;
+}
+.quality-btn {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all .2s;
+  font-family: 'Nunito', sans-serif;
+}
+.quality-btn:hover { border-color: rgba(255,255,255,0.2); }
+.quality-btn.selected { border-color: var(--purple-light); background: var(--purple-glow); }
+.quality-btn .qb-emoji { font-size: 22px; display: block; margin-bottom: 4px; }
+.quality-btn .qb-label { font-size: 12px; font-weight: 800; color: var(--text); }
+.quality-btn .qb-pts {
+  font-size: 11px; font-weight: 700; color: var(--amber);
+  display: block; margin-top: 2px;
+}
+
+/* ── CONFETTI ── */
+.confetti-container {
+  position: fixed; inset: 0; z-index: 999;
+  pointer-events: none; overflow: hidden;
+}
+.confetti-piece {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  animation: confetti-fall var(--d) ease-in forwards;
+}
+@keyframes confetti-fall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity:1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity:0; }
+}
+
+/* ── FLOATING POINTS ── */
+.float-pts {
+  position: fixed; z-index: 998;
+  font-size: 24px; font-weight: 900;
+  color: var(--amber);
+  text-shadow: 0 0 20px var(--amber-glow);
+  pointer-events: none;
+  animation: float-up .9s ease-out forwards;
+}
+@keyframes float-up {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-80px) scale(1.4); opacity: 0; }
+}
+
+/* ── NAV BAR ── */
+.nav-bar {
+  position: fixed; bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 100%; max-width: 420px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding: 10px 0 20px;
+  z-index: 50;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 3px;
+  cursor: pointer; transition: all .2s;
+  padding: 4px 0;
+}
+.nav-icon { font-size: 20px; line-height:1; }
+.nav-label { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+.nav-item.active .nav-label { color: var(--purple-light); }
+.nav-item.active .nav-icon { filter: drop-shadow(0 0 6px var(--purple-glow)); }
+
+/* ── PARENT MODAL ── */
+.parent-panel {
+  background: #12111e;
+  border-radius: 28px 28px 0 0;
+  border: 1px solid var(--border);
+  padding: 20px 20px 40px;
+  transform: translateY(100%);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  max-height: 85vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.parent-panel::-webkit-scrollbar { display: none; }
+.modal-overlay.open .parent-panel { transform: translateY(0); }
+
+.parent-task-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.ptr-icon { font-size: 22px; }
+.ptr-info { flex: 1; }
+.ptr-info h4 { font-size: 13px; font-weight: 800; margin-bottom: 2px; }
+.ptr-info p { font-size: 11px; color: var(--muted); font-weight: 600; }
+.ptr-actions { display: flex; gap: 6px; }
+.ptr-btn {
+  width: 34px; height: 34px; border-radius: 10px; border: none;
+  cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+}
+.ptr-btn.approve { background: rgba(74,222,128,0.15); color: var(--green); }
+.ptr-btn.approve:hover { background: var(--green); color: #0f0e17; }
+.ptr-btn.reject  { background: rgba(255,107,107,0.15); color: var(--coral); }
+.ptr-btn.reject:hover  { background: var(--coral); color: white; }
+
+.parent-section { margin-bottom: 20px; }
+.parent-section-title {
+  font-size: 12px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); margin-bottom: 10px;
+}
+.new-task-form { display: flex; flex-direction: column; gap: 8px; }
+.form-row { display: flex; gap: 8px; }
+.form-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s;
+}
+.form-input:focus { border-color: var(--purple-light); }
+.form-input::placeholder { color: var(--muted); }
+.form-input.small { max-width: 80px; }
+.btn-add-task {
+  width: 100%;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 800;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: none; cursor: pointer;
+  background: var(--purple);
+  color: white;
+  transition: all .2s;
+  margin-top: 4px;
+}
+.btn-add-task:hover { background: var(--purple-light); }
+
+/* young mode tweaks */
+body.young .task-info h3 { font-size: 17px; }
+body.young .task-card { padding: 18px; }
+body.young .task-icon { width: 46px; height: 46px; font-size: 24px; }
+body.young .reward-card { width: 140px; }
+</style>
+<script src="/js/api.js"></script>
+</head>
+<body class="young">
+
+<!-- Stars BG -->
+<div class="stars" id="stars"></div>
+
+<!-- Mode toggle -->
+<div class="mode-bar">
+  <button class="mode-btn active" onclick="setAge('young')">6–9</button>
+  <button class="mode-btn" onclick="setAge('teen')">9–13</button>
+  <button class="mode-btn" onclick="openParent()" style="color:var(--amber)">👨‍👩‍👧</button>
+</div>
+
+<!-- Confetti container -->
+<div class="confetti-container" id="confetti"></div>
+
+<!-- Main app -->
+<div class="app-wrapper">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="avatar-ring">
+        <div class="avatar-inner" id="avatar-emoji">🦸</div>
+      </div>
+      <div class="greeting">
+        <h2 id="greet-name">Merhaba, Ali! 👋</h2>
+        <p id="greet-sub">Bugün 3 görevin var</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="points-badge">
+        <span class="points-star">⭐</span>
+        <span class="points-val" id="total-pts">145</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Streak -->
+  <div class="streak-bar">
+    <span class="streak-fire">🔥</span>
+    <div class="streak-text">
+      <strong>4 Günlük Seri!</strong>
+      <span>Bu hafta devam et!</span>
+    </div>
+    <div class="streak-dots" id="streak-dots"></div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-section">
+    <div class="progress-header">
+      <span>BUGÜNÜN İLERLEMESİ</span>
+      <span id="progress-label">1 / 4 tamamlandı</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:25%"></div>
+    </div>
+  </div>
+
+  <!-- Category filter -->
+  <div class="cat-scroll">
+    <button class="cat-chip active" data-cat="all" onclick="filterCat(this,'all')">Tümü</button>
+    <button class="cat-chip" data-cat="rutin" onclick="filterCat(this,'rutin')">🌅 Rutin</button>
+    <button class="cat-chip" data-cat="ev" onclick="filterCat(this,'ev')">🏠 Ev</button>
+    <button class="cat-chip" data-cat="okul" onclick="filterCat(this,'okul')">📚 Okul</button>
+    <button class="cat-chip" data-cat="hareket" onclick="filterCat(this,'hareket')">⚽ Hareket</button>
+  </div>
+
+  <!-- Tasks -->
+  <div class="section-title">Görevler</div>
+  <div class="tasks-list" id="tasks-list"></div>
+
+  <!-- Rewards -->
+  <div class="rewards-section">
+    <div class="section-title">Ödüller</div>
+    <div class="rewards-scroll" id="rewards-list"></div>
+  </div>
+</div>
+
+<!-- Task detail modal -->
+<div class="modal-overlay" id="task-modal" onclick="closeModal('task-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <span class="modal-task-icon" id="m-icon">🧹</span>
+    <div class="modal-title" id="m-title">Oda Toplama</div>
+    <div class="modal-sub" id="m-sub">Ev görevi · Günlük</div>
+    <div class="modal-info-row">
+      <div class="modal-info-chip">
+        <span class="mic-val" id="m-pts">10</span>
+        <span class="mic-label">⭐ Temel</span>
+      </div>
+      <div class="modal-info-chip">
+        <span class="mic-val" id="m-bonus">+10</span>
+        <span class="mic-label">🌟 Çok iyi</span>
+      </div>
+      <div class="modal-info-chip">
+        <span class="mic-val" id="m-time">15dk</span>
+        <span class="mic-label">⏱ Süre</span>
+      </div>
+    </div>
+    <!-- timer ring -->
+    <div class="timer-ring-wrap">
+      <div class="timer-ring">
+        <svg class="timer-svg" width="120" height="120" viewBox="0 0 120 120">
+          <circle class="timer-track" cx="60" cy="60" r="52"/>
+          <circle class="timer-fill" id="timer-circle" cx="60" cy="60" r="52"
+            stroke="url(#tg)" stroke-dasharray="327" stroke-dashoffset="0"/>
+          <defs>
+            <linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#a87fff"/>
+              <stop offset="100%" stop-color="#3ecfb2"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="timer-center">
+          <span class="tc-time" id="timer-display">15:00</span>
+          <span class="tc-label" id="timer-label">Hazır</span>
+        </div>
+      </div>
+    </div>
+    <!-- subtasks -->
+    <div class="subtasks" id="m-subtasks"></div>
+    <button class="btn-start" id="btn-start" onclick="toggleTimer()">▶ Başla</button>
+  </div>
+</div>
+
+<!-- Quality approval modal -->
+<div class="modal-overlay" id="quality-modal" onclick="closeModal('quality-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:70vh">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="margin-bottom:6px">Nasıl yaptın? 🤔</div>
+    <div class="modal-sub" style="margin-bottom:16px">Ebeveynin onaylayacak — dürüst ol!</div>
+    <div class="quality-row">
+      <div class="quality-btn" onclick="selectQuality('great')" id="q-great">
+        <span class="qb-emoji">🌟</span>
+        <span class="qb-label">Çok iyi yaptım!</span>
+        <span class="qb-pts" id="qpts-great">+20 ⭐</span>
+      </div>
+      <div class="quality-btn" onclick="selectQuality('good')" id="q-good">
+        <span class="qb-emoji">😊</span>
+        <span class="qb-label">İyi yaptım</span>
+        <span class="qb-pts" id="qpts-good">+15 ⭐</span>
+      </div>
+      <div class="quality-btn" onclick="selectQuality('ok')" id="q-ok">
+        <span class="qb-emoji">🙂</span>
+        <span class="qb-label">Tamamladım</span>
+        <span class="qb-pts" id="qpts-ok">+10 ⭐</span>
+      </div>
+      <div class="quality-btn" onclick="selectQuality('late')" id="q-late">
+        <span class="qb-emoji">⏰</span>
+        <span class="qb-label">Geç bitirdim</span>
+        <span class="qb-pts" id="qpts-late">+5 ⭐</span>
+      </div>
+    </div>
+    <button class="btn-start" id="btn-confirm" onclick="confirmCompletion()" disabled style="opacity:.4">
+      ✅ Onaya Gönder
+    </button>
+  </div>
+</div>
+
+<!-- Parent panel modal -->
+<div class="modal-overlay" id="parent-modal" onclick="closeModal('parent-modal')">
+  <div class="parent-panel" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="margin-bottom:4px">Ebeveyn Paneli 👨‍👩‍👧</div>
+    <div class="modal-sub">Görev yönetimi ve onaylar</div>
+
+    <!-- pending approvals -->
+    <div class="parent-section">
+      <div class="parent-section-title">⏳ Onay Bekleyenler</div>
+      <div id="pending-list"></div>
+    </div>
+
+    <!-- add task -->
+    <div class="parent-section">
+      <div class="parent-section-title">➕ Yeni Görev Ekle</div>
+      <div class="new-task-form">
+        <input class="form-input" id="new-task-name" placeholder="Görev adı (ör: Diş Fırçalama)">
+        <div class="form-row">
+          <input class="form-input small" id="new-task-pts" placeholder="Puan" type="number" value="10">
+          <input class="form-input small" id="new-task-time" placeholder="Dk" type="number" value="10">
+          <select class="form-input" id="new-task-cat" style="flex:1">
+            <option value="rutin">🌅 Rutin</option>
+            <option value="ev">🏠 Ev</option>
+            <option value="okul">📚 Okul</option>
+            <option value="hareket">⚽ Hareket</option>
+          </select>
+        </div>
+        <button class="btn-add-task" onclick="addNewTask()">Görevi Ekle</button>
+      </div>
+    </div>
+
+    <!-- point adjustment -->
+    <div class="parent-section">
+      <div class="parent-section-title">⭐ Puan Düzenle</div>
+      <div class="form-row">
+        <input class="form-input" id="adj-pts" placeholder="Puan (eksi için -10)" type="number">
+        <input class="form-input" id="adj-note" placeholder="Sebep (ör: Güzel davranış)">
+      </div>
+      <button class="btn-add-task" style="margin-top:8px; background:var(--amber); color:#0f0e17" onclick="adjustPoints()">Puanı Güncelle</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nav bar -->
+<div class="nav-bar">
+  <div class="nav-item active">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Ana Sayfa</span>
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">✅</span>
+    <span class="nav-label">Görevler</span>
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">🏆</span>
+    <span class="nav-label">Ödüller</span>
+  </div>
+  <div class="nav-item">
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">Gelişim</span>
+  </div>
+</div>
+
+<script>
+// ── DATA ──
+let totalPoints = 145;
+let currentTask = null;
+let timerInterval = null;
+let timerRunning = false;
+let timerSeconds = 0;
+let timerTotal = 0;
+let selectedQuality = null;
+let ageMode = 'young';
+
+const COLORS = ['teal','amber','coral','blue','purple','green'];
+
+const tasks = [
+  { id:1, title:'Diş Fırçalama', sub:'Sabah rutini', icon:'🦷', cat:'rutin', color:'teal',
+    pts:10, bonusGreat:5, bonusGood:3, penaltyLate:-3, penaltySkip:-5, duration:5,
+    subtasks:['Fırçayı ıslatmak','2 dk fırçalamak','Ağzı çalkalamak'], done:false, pending:false },
+  { id:2, title:'Oda Toplama', sub:'Günlük ev görevi', icon:'🧹', cat:'ev', color:'amber',
+    pts:10, bonusGreat:10, bonusGood:5, penaltyLate:-5, penaltySkip:-10, duration:15,
+    subtasks:['Yatağı düzelt','Oyuncakları topla','Elbiseleri yerleştir','Masayı sil'], done:false, pending:false },
+  { id:3, title:'Matematik Ödevi', sub:'Okul görevi', icon:'📐', cat:'okul', color:'blue',
+    pts:15, bonusGreat:10, bonusGood:5, penaltyLate:-5, penaltySkip:-15, duration:20,
+    subtasks:['Kitabı aç','Soruları çöz','Kontrol et'], done:true, pending:false },
+  { id:4, title:'30 Dk Egzersiz', sub:'Hareket vakti', icon:'⚽', cat:'hareket', color:'coral',
+    pts:12, bonusGreat:8, bonusGood:4, penaltyLate:-4, penaltySkip:-10, duration:30,
+    subtasks:['Isınma hareketleri','Ana egzersiz','Soğuma'], done:false, pending:false },
+];
+
+const rewards = [
+  { name:'Ekstra Oyun', icon:'🎮', pts:50, color:'purple' },
+  { name:'Dondurma', icon:'🍦', pts:80, color:'teal' },
+  { name:'Film Gecesi', icon:'🎬', pts:120, color:'coral' },
+  { name:'Park Gezisi', icon:'🎡', pts:200, color:'amber' },
+  { name:'Oyuncak', icon:'🧸', pts:350, color:'blue' },
+];
+
+// ── INIT ──
+function init() {
+  renderStars();
+  renderStreakDots();
+  renderTasks();
+  renderRewards();
+  updateProgress();
+}
+
+function renderStars() {
+  const c = document.getElementById('stars');
+  for (let i=0; i<40; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random()*3+1;
+    s.style.cssText = `
+      left:${Math.random()*100}%;top:${Math.random()*100}%;
+      width:${size}px;height:${size}px;
+      --d:${2+Math.random()*4}s;--delay:${Math.random()*5}s;
+      --op:${0.3+Math.random()*0.7};
+    `;
+    c.appendChild(s);
+  }
+}
+
+function renderStreakDots() {
+  const days = ['P','S','Ç','P','C','C','P'];
+  const doneCount = 4;
+  const c = document.getElementById('streak-dots');
+  c.innerHTML = days.map((d,i) => `<div class="streak-dot${i<doneCount?' done':''}"></div>`).join('');
+}
+
+function renderTasks(cat='all') {
+  const list = document.getElementById('tasks-list');
+  list.innerHTML = '';
+  const filtered = cat==='all' ? tasks : tasks.filter(t=>t.cat===cat);
+  filtered.forEach(t => {
+    const div = document.createElement('div');
+    div.className = `task-card${t.done?' done':''}${t.pending?' done':''}`;
+    div.dataset.color = t.color;
+    div.onclick = () => openTask(t);
+    div.innerHTML = `
+      <div class="task-header">
+        <div class="task-icon">${t.icon}</div>
+        <div class="task-info">
+          <h3>${t.title}</h3>
+          <div class="task-sub">${t.sub}</div>
+        </div>
+        <div class="task-check">${t.done||t.pending ? '✓' : ''}</div>
+      </div>
+      <div class="task-footer">
+        <span class="task-tag">${catLabel(t.cat)}</span>
+        <span class="task-timer-badge">${t.duration} dk</span>
+        <span class="task-pts">${t.pts}${t.bonusGreat?` + ${t.bonusGreat}`:''}</span>
+      </div>
+    `;
+    if (t.pending) {
+      div.querySelector('.task-check').textContent = '⏳';
+      div.querySelector('.task-check').style.background = 'rgba(255,179,71,0.2)';
+    }
+    list.appendChild(div);
+  });
+}
+
+function catLabel(c) {
+  return {rutin:'🌅 Rutin',ev:'🏠 Ev',okul:'📚 Okul',hareket:'⚽ Hareket'}[c]||c;
+}
+
+function renderRewards() {
+  const list = document.getElementById('rewards-list');
+  list.innerHTML = '';
+  rewards.forEach(r => {
+    const unlocked = totalPoints >= r.pts;
+    const pct = Math.min(100, (totalPoints/r.pts)*100);
+    const div = document.createElement('div');
+    div.className = `reward-card ${unlocked?'unlocked':'locked'}`;
+    div.innerHTML = `
+      ${!unlocked?'<span class="reward-lock">🔒</span>':''}
+      <span class="r-icon">${r.icon}</span>
+      <div class="r-name">${r.name}</div>
+      <div class="reward-progress-bar"><div class="reward-fill" style="width:${pct}%"></div></div>
+      <div class="reward-pts">${unlocked?'✅ Hazır!':totalPoints+' / '+r.pts+' ⭐'}</div>
+    `;
+    if (unlocked) div.onclick = () => claimReward(r);
+    list.appendChild(div);
+  });
+}
+
+function updateProgress() {
+  const done = tasks.filter(t=>t.done||t.pending).length;
+  const total = tasks.length;
+  document.getElementById('progress-label').textContent = `${done} / ${total} tamamlandı`;
+  document.getElementById('progress-fill').style.width = `${(done/total)*100}%`;
+  document.getElementById('greet-sub').textContent = `Bugün ${total-done} görevin var`;
+}
+
+// ── TASK MODAL ──
+function openTask(t) {
+  if (t.done) return;
+  currentTask = t;
+  stopTimer();
+  document.getElementById('m-icon').textContent = t.icon;
+  document.getElementById('m-title').textContent = t.title;
+  document.getElementById('m-sub').textContent = t.sub;
+  document.getElementById('m-pts').textContent = t.pts;
+  document.getElementById('m-bonus').textContent = '+'+t.bonusGreat;
+  document.getElementById('m-time').textContent = t.duration+'dk';
+  timerTotal = t.duration * 60;
+  timerSeconds = timerTotal;
+  updateTimerDisplay();
+  updateTimerRing(1);
+  document.getElementById('timer-label').textContent = 'Hazır';
+  document.getElementById('btn-start').textContent = '▶  Başla';
+  document.getElementById('btn-start').className = 'btn-start';
+  // subtasks
+  const sub = document.getElementById('m-subtasks');
+  sub.innerHTML = t.subtasks.map((s,i)=>`
+    <div class="subtask-item" id="sub-${t.id}-${i}" onclick="toggleSubtask(${t.id},${i})">
+      <div class="subtask-check"></div>
+      <span class="subtask-text">${s}</span>
+    </div>
+  `).join('');
+  openModal('task-modal');
+}
+
+function toggleSubtask(tid, idx) {
+  const el = document.getElementById(`sub-${tid}-${idx}`);
+  el.classList.toggle('done');
+  const check = el.querySelector('.subtask-check');
+  check.textContent = el.classList.contains('done') ? '✓' : '';
+}
+
+// ── TIMER ──
+function toggleTimer() {
+  if (!timerRunning) {
+    startTimer();
+  } else {
+    // "Bitti!" tıklandı
+    stopTimer();
+    closeModal('task-modal');
+    setTimeout(()=>openQuality(),200);
+  }
+}
+
+function startTimer() {
+  timerRunning = true;
+  document.getElementById('btn-start').textContent = '🏁  Bitti!';
+  document.getElementById('btn-start').className = 'btn-start running';
+  document.getElementById('timer-label').textContent = 'Sayıyor...';
+  timerInterval = setInterval(()=>{
+    timerSeconds--;
+    if (timerSeconds <= 0) {
+      timerSeconds = 0;
+      stopTimer();
+      document.getElementById('timer-label').textContent = 'Süre doldu!';
+      document.getElementById('btn-start').textContent = '⏰  Geç Bitti!';
+      document.getElementById('btn-start').className = 'btn-start';
+    }
+    updateTimerDisplay();
+    updateTimerRing(timerSeconds/timerTotal);
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerSeconds/60);
+  const s = timerSeconds%60;
+  document.getElementById('timer-display').textContent =
+    `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function updateTimerRing(pct) {
+  const circ = 327;
+  const offset = circ * (1-pct);
+  const c = document.getElementById('timer-circle');
+  c.style.strokeDashoffset = offset;
+  c.style.stroke = pct > 0.5 ? 'url(#tg)' :
+                   pct > 0.25 ? 'var(--amber)' : 'var(--coral)';
+}
+
+// ── QUALITY MODAL ──
+function openQuality() {
+  selectedQuality = null;
+  document.querySelectorAll('.quality-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('btn-confirm').disabled = true;
+  document.getElementById('btn-confirm').style.opacity = '.4';
+  // set point labels
+  const t = currentTask;
+  const late = timerSeconds === 0;
+  document.getElementById('qpts-great').textContent = `+${t.pts+t.bonusGreat} ⭐`;
+  document.getElementById('qpts-good').textContent  = `+${t.pts+t.bonusGood} ⭐`;
+  document.getElementById('qpts-ok').textContent    = `+${t.pts} ⭐`;
+  document.getElementById('qpts-late').textContent  = `+${Math.max(0,t.pts+t.penaltyLate)} ⭐`;
+  openModal('quality-modal');
+}
+
+function selectQuality(q) {
+  selectedQuality = q;
+  document.querySelectorAll('.quality-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('q-'+q).classList.add('selected');
+  document.getElementById('btn-confirm').disabled = false;
+  document.getElementById('btn-confirm').style.opacity = '1';
+}
+
+function confirmCompletion() {
+  if (!selectedQuality || !currentTask) return;
+  const t = currentTask;
+  let earned = t.pts;
+  if (selectedQuality==='great') earned += t.bonusGreat;
+  if (selectedQuality==='good')  earned += t.bonusGood;
+  if (selectedQuality==='late')  earned = Math.max(0, t.pts+t.penaltyLate);
+  t.pending = true;
+  totalPoints += earned;
+  closeModal('quality-modal');
+  setTimeout(()=>{
+    renderTasks();
+    renderRewards();
+    updateProgress();
+    animatePoints(earned);
+    launchConfetti();
+    updatePointsDisplay();
+    // add to pending list for parent
+    addPendingApproval(t, selectedQuality, earned);
+  }, 200);
+}
+
+function animatePoints(pts) {
+  const el = document.createElement('div');
+  el.className = 'float-pts';
+  el.textContent = '+'+pts+' ⭐';
+  const badge = document.querySelector('.points-badge');
+  const rect = badge.getBoundingClientRect();
+  el.style.left = rect.left + 'px';
+  el.style.top  = rect.top + 'px';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 900);
+}
+
+function updatePointsDisplay() {
+  const el = document.getElementById('total-pts');
+  el.style.transform = 'scale(1.4)';
+  el.textContent = totalPoints;
+  setTimeout(()=>el.style.transform='scale(1)',300);
+}
+
+function launchConfetti() {
+  const colors = ['#a87fff','#3ecfb2','#ffb347','#ff6b6b','#4ade80','#60a5fa'];
+  const c = document.getElementById('confetti');
+  for(let i=0; i<60; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.cssText = `
+      left:${20+Math.random()*60}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;
+      border-radius:${Math.random()>0.5?'50%':'2px'};
+      --d:${0.8+Math.random()*1.2}s;
+      animation-delay:${Math.random()*0.4}s;
+    `;
+    c.appendChild(p);
+    setTimeout(()=>p.remove(), 2000);
+  }
+}
+
+// ── PARENT PANEL ──
+let pendingApprovals = [];
+
+function addPendingApproval(task, quality, pts) {
+  pendingApprovals.push({task, quality, pts, id: Date.now()});
+}
+
+function openParent() {
+  renderPendingList();
+  openModal('parent-modal');
+}
+
+function renderPendingList() {
+  const list = document.getElementById('pending-list');
+  if (pendingApprovals.length === 0) {
+    list.innerHTML = '<p style="font-size:12px;color:var(--muted);text-align:center;padding:12px">Bekleyen onay yok 🎉</p>';
+    return;
+  }
+  list.innerHTML = pendingApprovals.map(p=>`
+    <div class="parent-task-row" id="pr-${p.id}">
+      <span class="ptr-icon">${p.task.icon}</span>
+      <div class="ptr-info">
+        <h4>${p.task.title}</h4>
+        <p>${qualityLabel(p.quality)} · +${p.pts} ⭐ öneriyor</p>
+      </div>
+      <div class="ptr-actions">
+        <button class="ptr-btn approve" onclick="approveTask(${p.id})">✓</button>
+        <button class="ptr-btn reject"  onclick="rejectTask(${p.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function qualityLabel(q) {
+  return {great:'🌟 Çok iyi',good:'😊 İyi',ok:'🙂 Tamamladı',late:'⏰ Geç'}[q]||q;
+}
+
+function approveTask(id) {
+  const p = pendingApprovals.find(x=>x.id===id);
+  if (!p) return;
+  p.task.done = true; p.task.pending = false;
+  pendingApprovals = pendingApprovals.filter(x=>x.id!==id);
+  closeModal('parent-modal');
+  setTimeout(()=>{
+    renderTasks(); updateProgress(); renderRewards();
+  },200);
+}
+
+function rejectTask(id) {
+  const p = pendingApprovals.find(x=>x.id===id);
+  if (!p) return;
+  // geri al
+  totalPoints = Math.max(0, totalPoints - p.pts);
+  p.task.pending = false;
+  pendingApprovals = pendingApprovals.filter(x=>x.id!==id);
+  updatePointsDisplay();
+  closeModal('parent-modal');
+  setTimeout(()=>{ renderTasks(); updateProgress(); renderRewards(); },200);
+}
+
+function addNewTask() {
+  const name = document.getElementById('new-task-name').value.trim();
+  if (!name) return;
+  const pts = parseInt(document.getElementById('new-task-pts').value)||10;
+  const dur = parseInt(document.getElementById('new-task-time').value)||10;
+  const cat = document.getElementById('new-task-cat').value;
+  const icons = {rutin:'☀️', ev:'🏠', okul:'📚', hareket:'⚽'};
+  const colors = {rutin:'teal', ev:'amber', okul:'blue', hareket:'coral'};
+  tasks.push({
+    id: Date.now(), title:name,
+    sub: catLabel(cat)+' · Ebeveyn ekledi',
+    icon: icons[cat]||'📋', cat, color: colors[cat]||'purple',
+    pts, bonusGreat:Math.round(pts*0.5), bonusGood:Math.round(pts*0.3),
+    penaltyLate:-Math.round(pts*0.3), penaltySkip:-pts,
+    duration: dur, subtasks:[], done:false, pending:false
+  });
+  document.getElementById('new-task-name').value='';
+  closeModal('parent-modal');
+  setTimeout(()=>{ renderTasks(); updateProgress(); },200);
+}
+
+function adjustPoints() {
+  const delta = parseInt(document.getElementById('adj-pts').value)||0;
+  if (!delta) return;
+  totalPoints = Math.max(0, totalPoints+delta);
+  updatePointsDisplay();
+  renderRewards();
+  if (delta>0) launchConfetti();
+  document.getElementById('adj-pts').value='';
+  document.getElementById('adj-note').value='';
+  closeModal('parent-modal');
+}
+
+// ── REWARD CLAIM ──
+function claimReward(r) {
+  if (totalPoints < r.pts) return;
+  totalPoints -= r.pts;
+  updatePointsDisplay();
+  renderRewards();
+  launchConfetti();
+}
+
+// ── FILTER ──
+function filterCat(el, cat) {
+  document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderTasks(cat);
+}
+
+// ── AGE MODE ──
+function setAge(mode) {
+  ageMode = mode;
+  document.body.className = mode;
+  document.querySelectorAll('.mode-btn').forEach((b,i)=>{
+    b.classList.toggle('active', (i===0&&mode==='young')||(i===1&&mode==='teen'));
+  });
+  const greet = document.getElementById('greet-name');
+  if (mode==='teen') {
+    greet.textContent = 'Merhaba, Ali 👋';
+    document.getElementById('greet-sub').style.fontSize='12px';
+  } else {
+    greet.textContent = 'Merhaba, Ali! 👋';
+  }
+}
+
+// ── MODAL HELPERS ──
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (id==='task-modal') stopTimer();
+}
+
+// ── START ──
+init();
+</script>
+</body>
+</html>

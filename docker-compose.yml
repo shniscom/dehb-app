@@ -1,0 +1,30 @@
+# docker-compose.yml
+# Coolify bu dosyayı otomatik algılar.
+# Environment değişkenlerini Coolify panelinden girin.
+
+version: '3.9'
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_DIR=/app/data
+      - ALLOWED_ORIGIN=${ALLOWED_ORIGIN:-*}
+    volumes:
+      # SQLite veritabanı kalıcı olarak saklanır
+      - dehb_data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  dehb_data:
+    driver: local

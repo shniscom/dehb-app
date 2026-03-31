@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Görev Kahramanı — Giriş</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="/js/api.js"></script>
+<style>
+:root {
+  --bg: #0f0e17; --surface: #1a1828; --surface2: #232135;
+  --border: rgba(255,255,255,0.08);
+  --text: #f2f0ff; --muted: rgba(242,240,255,0.5);
+  --purple: #7c5cbf; --purple-light: #a87fff; --purple-glow: rgba(168,127,255,0.25);
+  --teal: #3ecfb2; --amber: #ffb347; --coral: #ff6b6b; --green: #4ade80;
+  --radius: 20px; --radius-sm: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
+  min-height:100vh; display:flex; align-items:center; justify-content:center; }
+
+.stars { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.star { position:absolute; border-radius:50%; background:white;
+  animation:twinkle var(--d) ease-in-out infinite var(--delay); }
+@keyframes twinkle { 0%,100%{opacity:0} 50%{opacity:var(--op)} }
+
+.login-wrap { position:relative; z-index:1; width:100%; max-width:420px; padding:20px; }
+
+.logo { text-align:center; margin-bottom:32px; }
+.logo-icon {
+  width:72px; height:72px; border-radius:22px;
+  background:linear-gradient(135deg,var(--purple),var(--teal));
+  display:flex; align-items:center; justify-content:center;
+  font-size:38px; margin:0 auto 14px;
+  box-shadow: 0 0 30px var(--purple-glow);
+}
+.logo h1 { font-size:24px; font-weight:900; margin-bottom:4px; }
+.logo p  { font-size:13px; color:var(--muted); font-weight:600; }
+
+.tab-row {
+  display:flex; background:var(--surface2); border-radius:40px;
+  padding:4px; margin-bottom:24px; gap:4px;
+}
+.tab-btn {
+  flex:1; font-family:'Nunito',sans-serif; font-size:13px; font-weight:800;
+  padding:10px; border:none; border-radius:30px; cursor:pointer;
+  background:transparent; color:var(--muted); transition:all .2s;
+}
+.tab-btn.active { background:var(--purple); color:white; box-shadow:0 0 12px var(--purple-glow); }
+
+.panel { display:none; }
+.panel.active { display:block; }
+
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:24px;
+}
+
+.form-group { margin-bottom:16px; }
+.form-label { font-size:11px; font-weight:800; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:6px; }
+.form-input {
+  width:100%; background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:12px 14px;
+  font-family:'Nunito',sans-serif; font-size:14px; font-weight:600;
+  color:var(--text); outline:none; transition:border-color .2s;
+}
+.form-input:focus { border-color:var(--purple-light); }
+.form-input::placeholder { color:var(--muted); }
+
+.btn-login {
+  width:100%; font-family:'Nunito',sans-serif;
+  font-size:16px; font-weight:900; padding:14px;
+  border-radius:var(--radius); border:none; cursor:pointer;
+  background:linear-gradient(135deg,var(--purple),var(--teal));
+  color:white; box-shadow:0 4px 20px var(--purple-glow);
+  transition:all .2s; margin-top:4px;
+}
+.btn-login:hover { transform:translateY(-1px); }
+.btn-login:active { transform:scale(0.98); }
+.btn-login:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+.child-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.child-btn {
+  background:var(--surface2); border:1.5px solid var(--border);
+  border-radius:var(--radius); padding:16px 12px;
+  cursor:pointer; text-align:center; transition:all .2s;
+  font-family:'Nunito',sans-serif;
+}
+.child-btn:hover { border-color:var(--purple-light); background:rgba(168,127,255,0.08); }
+.child-btn.selected { border-color:var(--purple-light); background:rgba(168,127,255,0.15); }
+.child-btn .cb-avatar { font-size:32px; display:block; margin-bottom:6px; }
+.child-btn .cb-name   { font-size:13px; font-weight:800; color:var(--text); }
+.child-btn .cb-pts    { font-size:11px; font-weight:700; color:var(--amber); }
+
+.error-msg {
+  background:rgba(255,107,107,0.15); border:1px solid rgba(255,107,107,0.3);
+  border-radius:var(--radius-sm); padding:10px 14px;
+  font-size:12px; font-weight:700; color:var(--coral);
+  margin-bottom:14px; display:none;
+}
+.error-msg.show { display:block; }
+
+.hint { font-size:11px; color:var(--muted); text-align:center; margin-top:16px; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="login-wrap">
+  <div class="logo">
+    <div class="logo-icon">🦸</div>
+    <h1>Görev Kahramanı</h1>
+    <p>DEHB Görev & Puan Takip Sistemi</p>
+  </div>
+
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="switchTab('parent')">👨‍👩‍👧 Ebeveyn Girişi</button>
+    <button class="tab-btn" onclick="switchTab('child')">🧒 Çocuk Girişi</button>
+  </div>
+
+  <!-- Ebeveyn girişi -->
+  <div class="panel active" id="panel-parent">
+    <div class="card">
+      <div class="error-msg" id="parent-error"></div>
+      <div class="form-group">
+        <label class="form-label">E-posta</label>
+        <input class="form-input" id="email" type="email" placeholder="ebeveyn@ornek.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Şifre</label>
+        <input class="form-input" id="password" type="password" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter') parentLogin()">
+      </div>
+      <button class="btn-login" onclick="parentLogin()" id="btn-parent-login">Giriş Yap</button>
+    </div>
+    <div class="hint">Demo: ebeveyn@demo.com / demo123</div>
+  </div>
+
+  <!-- Çocuk girişi -->
+  <div class="panel" id="panel-child">
+    <div class="card">
+      <div class="error-msg" id="child-error"></div>
+      <div class="form-group">
+        <label class="form-label">Aile Kodu</label>
+        <input class="form-input" id="family-code" type="number" placeholder="Ebeveyninden al"
+          oninput="loadChildren()">
+      </div>
+      <div id="children-area" style="display:none">
+        <label class="form-label" style="margin-bottom:8px;display:block">Ben kimim?</label>
+        <div class="child-grid" id="child-grid"></div>
+      </div>
+      <button class="btn-login" onclick="childLogin()" id="btn-child-login" disabled style="opacity:.4">
+        Oyuna Başla! 🚀
+      </button>
+    </div>
+    <div class="hint">Aile kodunu ebeveyninden öğren.<br>Demo kod: <strong>1</strong></div>
+  </div>
+</div>
+
+<script>
+let selectedChildId = null;
+
+// ── YILDIZLAR ──
+(function(){
+  const c = document.getElementById('stars');
+  for(let i=0;i<40;i++){
+    const s = document.createElement('div'); s.className='star';
+    const sz=Math.random()*3+1;
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${sz}px;height:${sz}px;--d:${2+Math.random()*4}s;--delay:${Math.random()*5}s;--op:${0.3+Math.random()*0.7}`;
+    c.appendChild(s);
+  }
+})();
+
+// Zaten giriş yapılmışsa yönlendir
+if (Auth.isLoggedIn()) {
+  const u = Auth.getUser();
+  window.location.href = u?.role === 'parent' ? '/parent.html' : '/child.html';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='parent')||(i===1&&tab==='child')));
+  document.getElementById('panel-parent').classList.toggle('active', tab==='parent');
+  document.getElementById('panel-child').classList.toggle('active', tab==='child');
+}
+
+async function parentLogin() {
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn      = document.getElementById('btn-parent-login');
+  const errEl    = document.getElementById('parent-error');
+
+  errEl.classList.remove('show');
+  if (!email || !password) { showError(errEl, 'Email ve şifre giriniz'); return; }
+
+  btn.disabled = true; btn.textContent = 'Giriş yapılıyor...';
+  try {
+    const res = await AuthAPI.login(email, password);
+    Auth.setToken(res.token);
+    Auth.setUser(res.user);
+    window.location.href = '/parent.html';
+  } catch(e) {
+    showError(errEl, e.message);
+    btn.disabled = false; btn.textContent = 'Giriş Yap';
+  }
+}
+
+async function loadChildren() {
+  const familyId = document.getElementById('family-code').value.trim();
+  if (!familyId) { document.getElementById('children-area').style.display='none'; return; }
+
+  // Geçici token olmadan direkt endpoint çağrılamaz; aile ID'sini kullanarak
+  // açık bir endpoint üzerinden çocukları listeleriz (production'da rate-limit eklenebilir)
+  try {
+    const res = await fetch(`/api/auth/children?family_id=${familyId}`);
+    if (!res.ok) throw new Error();
+    const children = await res.json();
+    renderChildren(children, familyId);
+  } catch {
+    document.getElementById('children-area').style.display='none';
+  }
+}
+
+function renderChildren(children, familyId) {
+  if (!children.length) return;
+  const grid = document.getElementById('child-grid');
+  grid.innerHTML = children.map(c => `
+    <div class="child-btn" onclick="selectChild(${c.id},${familyId},this)">
+      <span class="cb-avatar">${c.avatar}</span>
+      <span class="cb-name">${c.name}</span>
+      <span class="cb-pts">⭐ ${c.total_points} puan</span>
+    </div>
+  `).join('');
+  document.getElementById('children-area').style.display='block';
+}
+
+function selectChild(id, familyId, el) {
+  selectedChildId = { id, familyId };
+  document.querySelectorAll('.child-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  const btn = document.getElementById('btn-child-login');
+  btn.disabled = false; btn.style.opacity='1';
+}
+
+async function childLogin() {
+  if (!selectedChildId) return;
+  const btn = document.getElementById('btn-child-login');
+  btn.disabled=true; btn.textContent='Yükleniyor...';
+  try {
+    const res = await AuthAPI.childLogin(selectedChildId.id, selectedChildId.familyId);
+    Auth.setToken(res.token);
+    Auth.setUser(res.user);
+    window.location.href = '/child.html';
+  } catch(e) {
+    showError(document.getElementById('child-error'), e.message);
+    btn.disabled=false; btn.textContent='Oyuna Başla! 🚀';
+  }
+}
+
+function showError(el, msg) {
+  el.textContent = msg; el.classList.add('show');
+}
+</script>
+</body>
+</html>

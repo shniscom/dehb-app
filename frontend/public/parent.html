@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Görev Kahramanı — Ebeveyn Paneli</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f6f2;
+  --surface: #ffffff;
+  --surface2: #f0efe9;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1a1a1a;
+  --muted: #888;
+  --muted2: #bbb;
+  --purple: #7c5cbf;
+  --purple-light: #a87fff;
+  --purple-bg: #f0ebff;
+  --teal: #1aad8e;
+  --teal-bg: #e4f8f3;
+  --amber: #e08a00;
+  --amber-bg: #fff4e0;
+  --coral: #d94f4f;
+  --coral-bg: #fff0f0;
+  --green: #2a9d5c;
+  --green-bg: #e8f8ef;
+  --blue: #2563eb;
+  --blue-bg: #eff4ff;
+  --radius: 18px;
+  --radius-sm: 10px;
+  --sidebar-w: 220px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top:0; left:0; bottom:0;
+  z-index: 10;
+  padding: 0 0 20px;
+}
+.sidebar-logo {
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-icon {
+  width: 38px; height: 38px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--purple), var(--teal));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.logo-text { font-size: 14px; font-weight: 900; line-height: 1.2; }
+.logo-text span { font-size: 11px; font-weight: 600; color: var(--muted); display:block; }
+
+.child-switcher {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.child-card {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer; transition: background .15s;
+}
+.child-card:hover { background: var(--surface2); }
+.child-card.active { background: var(--purple-bg); }
+.child-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  background: linear-gradient(135deg,#a87fff,#3ecfb2);
+  flex-shrink:0;
+}
+.child-info .ci-name { font-size: 13px; font-weight: 800; }
+.child-info .ci-pts  { font-size: 11px; color: var(--amber); font-weight: 700; }
+
+.nav-section { padding: 16px 16px 6px; }
+.nav-label { font-size: 10px; font-weight: 800; color: var(--muted2); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; padding-left:4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer; transition: all .15s;
+  font-size: 13px; font-weight: 700; color: var(--muted);
+  margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--purple-bg); color: var(--purple); }
+.nav-item .ni-icon { font-size: 16px; width:20px; text-align:center; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--coral); color: white;
+  font-size: 10px; font-weight: 800;
+  padding: 1px 7px; border-radius: 20px;
+}
+
+.sidebar-footer {
+  margin-top: auto; padding: 0 16px;
+  font-size: 11px; color: var(--muted2);
+  font-weight: 600; line-height: 1.6;
+}
+
+/* ── MAIN ── */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1; min-height: 100vh;
+  display: flex; flex-direction: column;
+}
+
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 28px;
+  display: flex; align-items: center; gap: 16px;
+  position: sticky; top: 0; z-index: 5;
+}
+.topbar h1 { font-size: 20px; font-weight: 900; flex:1; }
+.topbar-actions { display: flex; gap: 8px; }
+.btn {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 800;
+  padding: 8px 16px;
+  border-radius: 30px; border: none; cursor: pointer;
+  transition: all .15s;
+}
+.btn-primary { background: var(--purple); color: white; }
+.btn-primary:hover { background: var(--purple-light); }
+.btn-ghost {
+  background: transparent; color: var(--muted);
+  border: 1.5px solid var(--border2);
+}
+.btn-ghost:hover { background: var(--surface2); color: var(--text); }
+.btn-sm { font-size: 12px; padding: 6px 12px; }
+.btn-green  { background: var(--green);  color: white; }
+.btn-coral  { background: var(--coral);  color: white; }
+.btn-amber  { background: var(--amber);  color: white; }
+.btn-teal   { background: var(--teal);   color: white; }
+
+.content { padding: 28px; flex: 1; }
+
+/* ── PAGES ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── STAT CARDS ── */
+.stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.stat-card .sc-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
+.stat-card .sc-val { font-size: 28px; font-weight: 900; line-height:1; margin-bottom:4px; }
+.stat-card .sc-sub { font-size: 12px; color: var(--muted); font-weight: 600; }
+.stat-card.purple .sc-val { color: var(--purple); }
+.stat-card.teal   .sc-val { color: var(--teal); }
+.stat-card.amber  .sc-val { color: var(--amber); }
+.stat-card.green  .sc-val { color: var(--green); }
+
+/* ── PENDING SECTION ── */
+.section-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px;
+}
+.section-header h2 { font-size: 16px; font-weight: 900; flex:1; }
+.section-header .sh-count {
+  font-size: 11px; font-weight: 800;
+  background: var(--coral-bg); color: var(--coral);
+  padding: 3px 10px; border-radius: 20px;
+}
+
+.pending-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+
+.approval-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex; align-items: center; gap: 14px;
+  transition: box-shadow .2s;
+}
+.approval-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+.appr-icon {
+  width: 44px; height: 44px; border-radius: 14px;
+  background: var(--purple-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink:0;
+}
+.appr-body { flex:1; }
+.appr-body h3 { font-size: 14px; font-weight: 800; margin-bottom:3px; }
+.appr-body .ab-meta { font-size: 12px; color: var(--muted); font-weight: 600; display:flex; gap:10px; }
+.appr-quality {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 800;
+  padding: 4px 10px; border-radius: 20px;
+  margin-right: 8px;
+}
+.q-great { background: var(--amber-bg); color: var(--amber); }
+.q-good  { background: var(--teal-bg);  color: var(--teal); }
+.q-ok    { background: var(--blue-bg);  color: var(--blue); }
+.q-late  { background: var(--coral-bg); color: var(--coral); }
+.appr-pts { font-size: 14px; font-weight: 900; color: var(--amber); white-space:nowrap; }
+.appr-actions { display: flex; gap: 6px; align-items: center; }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 10px; border: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; cursor: pointer; transition: all .15s;
+}
+.icon-btn.approve { background: var(--green-bg); color: var(--green); }
+.icon-btn.approve:hover { background: var(--green); color: white; }
+.icon-btn.reject  { background: var(--coral-bg); color: var(--coral); }
+.icon-btn.reject:hover  { background: var(--coral);  color: white; }
+.icon-btn.edit    { background: var(--surface2); color: var(--muted); }
+.icon-btn.edit:hover    { background: var(--purple-bg); color: var(--purple); }
+
+/* ── CALENDAR (haftalık takvim) ── */
+.week-nav {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 18px;
+}
+.week-nav h3 { font-size: 15px; font-weight: 900; flex:1; }
+.week-nav-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--border2);
+  background: transparent; cursor: pointer;
+  font-size: 14px; transition: all .15s;
+}
+.week-nav-btn:hover { background: var(--surface2); }
+
+.calendar-grid {
+  display: grid; grid-template-columns: 80px repeat(7,1fr);
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.cal-header-cell {
+  padding: 12px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+.cal-header-cell:last-child { border-right: none; }
+.cal-header-cell.day-label { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; }
+.cal-header-cell.day-label.today { color: var(--purple); }
+.cal-header-cell.day-num { font-size: 15px; font-weight: 900; }
+.cal-header-cell.day-num.today { color: var(--purple); }
+
+.cal-row-label {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2);
+}
+.cal-row-label .crl-icon { font-size: 14px; }
+.cal-row-label .crl-name { font-size: 11px; font-weight: 700; color: var(--text); line-height: 1.3; }
+
+.cal-cell {
+  padding: 6px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  min-height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background .15s;
+}
+.cal-cell:last-child { border-right: none; }
+.cal-cell:hover { background: var(--surface2); }
+.cal-cell.today-col { background: rgba(124,92,191,0.04); }
+.cal-chip {
+  font-size: 10px; font-weight: 800;
+  padding: 3px 7px; border-radius: 8px;
+  text-align: center; line-height: 1.3;
+  width: 100%;
+}
+.cal-chip.done  { background: var(--green-bg);  color: var(--green); }
+.cal-chip.pending { background: var(--amber-bg); color: var(--amber); }
+.cal-chip.missed  { background: var(--coral-bg); color: var(--coral); }
+.cal-chip.empty   { background: var(--surface2); color: var(--muted2); font-size:16px; }
+
+/* ── TASK MANAGER ── */
+.task-manager-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+
+.task-list-table {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.tlt-header {
+  display: grid;
+  grid-template-columns: 2fr 80px 70px 70px 80px 90px;
+  padding: 12px 18px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px; font-weight: 800; color: var(--muted); text-transform:uppercase; letter-spacing:.05em;
+  gap: 8px;
+}
+.task-row {
+  display: grid;
+  grid-template-columns: 2fr 80px 70px 70px 80px 90px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border);
+  align-items: center; gap: 8px;
+  transition: background .15s; cursor: pointer;
+}
+.task-row:last-child { border-bottom: none; }
+.task-row:hover { background: var(--surface2); }
+.tr-name { display:flex; align-items:center; gap:8px; }
+.tr-name .tn-icon { font-size: 18px; }
+.tr-name .tn-text h4 { font-size: 13px; font-weight: 800; }
+.tr-name .tn-text p  { font-size: 11px; color: var(--muted); font-weight: 600; }
+.tr-pts { font-size: 13px; font-weight: 800; color: var(--amber); }
+.tr-time { font-size: 12px; font-weight: 700; color: var(--muted); }
+.tr-recur { font-size: 11px; font-weight: 700; }
+.badge-pill {
+  display: inline-block; font-size: 10px; font-weight: 800;
+  padding: 3px 9px; border-radius: 20px;
+}
+.bp-daily   { background: var(--teal-bg);   color: var(--teal); }
+.bp-weekly  { background: var(--blue-bg);   color: var(--blue); }
+.bp-rutin   { background: var(--teal-bg);   color: var(--teal); }
+.bp-ev      { background: var(--amber-bg);  color: var(--amber); }
+.bp-okul    { background: var(--blue-bg);   color: var(--blue); }
+.bp-hareket { background: var(--coral-bg);  color: var(--coral); }
+.tr-actions { display:flex; gap:4px; }
+
+/* ── TASK FORM ── */
+.task-form-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: sticky; top: 90px;
+}
+.tfp-title { font-size: 15px; font-weight: 900; margin-bottom: 16px; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 11px; font-weight: 800; color: var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; display:block; }
+.form-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 700;
+  color: var(--text); outline:none;
+  transition: border-color .15s;
+}
+.form-input:focus { border-color: var(--purple-light); }
+.form-select { appearance: none; cursor: pointer; }
+.pts-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.pts-cell { text-align: center; }
+.pts-cell .pc-label { font-size: 10px; font-weight: 800; color: var(--muted); display:block; margin-bottom:3px; }
+.pts-input {
+  width:100%; text-align:center;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 4px;
+  font-family: 'Nunito',sans-serif; font-size:14px; font-weight:900;
+  color:var(--text); outline:none;
+}
+.pts-input.positive { color: var(--green); border-color: rgba(42,157,92,.25); }
+.pts-input.negative { color: var(--coral); border-color: rgba(217,79,79,.25); }
+.subtasks-input { display:flex; flex-direction:column; gap:5px; }
+.subtask-row { display:flex; gap:5px; }
+.subtask-row .form-input { flex:1; }
+.btn-add-sub {
+  background: transparent; border: 1.5px dashed var(--border2);
+  border-radius: var(--radius-sm); padding: 7px; cursor:pointer;
+  font-size:16px; color:var(--muted); transition:all .15s;
+  width:36px;
+}
+.btn-add-sub:hover { background:var(--purple-bg); color:var(--purple); border-color:var(--purple); }
+.btn-remove-sub {
+  background:transparent; border:none; cursor:pointer;
+  font-size:14px; color:var(--muted2); padding:0 4px;
+  transition:color .15s;
+}
+.btn-remove-sub:hover { color:var(--coral); }
+.template-chips { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; }
+.template-chip {
+  font-family:'Nunito',sans-serif; font-size:11px; font-weight:700;
+  padding:5px 11px; border-radius:20px; cursor:pointer;
+  border:1.5px solid var(--border); background:var(--surface2); color:var(--text);
+  transition:all .15s;
+}
+.template-chip:hover { background:var(--purple-bg); color:var(--purple); border-color:var(--purple); }
+
+/* ── REWARDS PAGE ── */
+.rewards-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+
+.reward-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.reward-mgmt-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  text-align: center;
+  transition: box-shadow .2s; cursor:pointer;
+  position:relative;
+}
+.reward-mgmt-card:hover { box-shadow: 0 2px 16px rgba(0,0,0,.08); }
+.rmc-icon { font-size: 36px; margin-bottom:10px; display:block; }
+.rmc-name { font-size: 14px; font-weight: 900; margin-bottom:4px; }
+.rmc-pts  { font-size: 13px; font-weight: 800; color: var(--amber); margin-bottom:8px; }
+.rmc-progress {
+  height: 6px; background: var(--surface2);
+  border-radius:6px; overflow:hidden; margin-bottom:4px;
+}
+.rmc-fill { height:100%; border-radius:6px; background: linear-gradient(90deg,var(--purple),var(--teal)); }
+.rmc-status { font-size: 11px; font-weight: 700; }
+.rmc-status.available { color: var(--green); }
+.rmc-status.locked    { color: var(--muted); }
+.rmc-actions { display:flex; gap:5px; justify-content:center; margin-top:10px; }
+.rmc-claimed-badge {
+  position:absolute; top:8px; right:8px;
+  font-size:9px; font-weight:800;
+  background:var(--green-bg); color:var(--green);
+  padding:2px 7px; border-radius:20px;
+}
+
+/* ── REPORT PAGE ── */
+.report-layout { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+.report-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:20px;
+}
+.report-card h3 { font-size:14px; font-weight:900; margin-bottom:14px; }
+
+.bar-chart { display:flex; flex-direction:column; gap:8px; }
+.bar-row { display:flex; align-items:center; gap:10px; }
+.bar-label { font-size:12px; font-weight:700; color:var(--muted); width:22px; text-align:center; }
+.bar-track { flex:1; height:14px; background:var(--surface2); border-radius:10px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:10px; background:linear-gradient(90deg,var(--purple),var(--teal)); transition:width .8s; }
+.bar-val { font-size:12px; font-weight:800; color:var(--text); width:26px; text-align:right; }
+
+.cat-breakdown { display:flex; flex-direction:column; gap:8px; }
+.cat-row { display:flex; align-items:center; gap:10px; }
+.cat-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.cat-name { font-size:12px; font-weight:700; flex:1; }
+.cat-pct  { font-size:12px; font-weight:800; color:var(--text); }
+
+.streak-history { display:flex; gap:4px; flex-wrap:wrap; }
+.sh-dot {
+  width:28px; height:28px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:800;
+}
+.sh-dot.full    { background:var(--green-bg);  color:var(--green); }
+.sh-dot.partial { background:var(--amber-bg);  color:var(--amber); }
+.sh-dot.empty   { background:var(--surface2);  color:var(--muted2); }
+
+.insights-list { display:flex; flex-direction:column; gap:8px; }
+.insight-item {
+  display:flex; gap:10px; align-items:flex-start;
+  padding:10px 12px;
+  border-radius:var(--radius-sm);
+  font-size:12px; font-weight:700; line-height:1.5;
+}
+.insight-item.good    { background:var(--green-bg);  color:#1a6b3c; }
+.insight-item.warn    { background:var(--amber-bg);  color:#8a5500; }
+.insight-item.info    { background:var(--blue-bg);   color:#1a3a8f; }
+.insight-item .ii-icon{ font-size:16px; flex-shrink:0; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index:999;
+  background: var(--text);
+  color: white; border-radius:14px;
+  padding: 12px 18px;
+  font-size: 13px; font-weight: 800;
+  display:flex; align-items:center; gap:8px;
+  transform: translateY(80px); opacity:0;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+  pointer-events:none;
+}
+.toast.show { transform: translateY(0); opacity:1; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position:fixed; inset:0; z-index:200;
+  background:rgba(0,0,0,.45); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal-box {
+  background:var(--surface); border-radius:var(--radius);
+  padding:24px; width:90%; max-width:400px;
+  border:1px solid var(--border);
+  transform:scale(.95); transition:transform .2s;
+}
+.modal-overlay.open .modal-box { transform:scale(1); }
+.modal-box h3 { font-size:16px; font-weight:900; margin-bottom:8px; }
+.modal-box p  { font-size:13px; color:var(--muted); font-weight:600; margin-bottom:18px; line-height:1.5; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align:center; padding:40px 20px;
+  font-size:13px; color:var(--muted); font-weight:600;
+}
+.empty-state .es-icon { font-size:40px; display:block; margin-bottom:10px; }
+
+@media(max-width:900px) {
+  .sidebar { display:none; }
+  .main { margin-left:0; }
+  .stat-grid { grid-template-columns:repeat(2,1fr); }
+  .task-manager-layout,.rewards-layout { grid-template-columns:1fr; }
+  .report-layout { grid-template-columns:1fr; }
+  .reward-grid { grid-template-columns:repeat(2,1fr); }
+  .tlt-header,.task-row { grid-template-columns:2fr 70px 70px 80px; }
+  .tr-time,.tr-recur { display:none; }
+}
+</style>
+<script src="/js/api.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🦸</div>
+    <div class="logo-text">Görev Kahramanı <span>Ebeveyn Paneli</span></div>
+  </div>
+
+  <div class="child-switcher">
+    <div class="child-card active" onclick="selectChild(0)">
+      <div class="child-avatar">🦸</div>
+      <div class="child-info">
+        <div class="ci-name">Ali (9 yaş)</div>
+        <div class="ci-pts" id="child0-pts">⭐ 145 puan</div>
+      </div>
+    </div>
+    <div class="child-card" onclick="selectChild(1)">
+      <div class="child-avatar" style="background:linear-gradient(135deg,#ff6b6b,#ffb347)">🦋</div>
+      <div class="child-info">
+        <div class="ci-name">Ayşe (7 yaş)</div>
+        <div class="ci-pts">⭐ 210 puan</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Ana Menü</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="ni-icon">📊</span> Özet
+    </div>
+    <div class="nav-item" onclick="showPage('approvals')">
+      <span class="ni-icon">✅</span> Onaylar
+      <span class="nav-badge" id="approval-badge">2</span>
+    </div>
+    <div class="nav-item" onclick="showPage('tasks')">
+      <span class="ni-icon">📋</span> Görevler
+    </div>
+    <div class="nav-item" onclick="showPage('calendar')">
+      <span class="ni-icon">📅</span> Takvim
+    </div>
+    <div class="nav-item" onclick="showPage('rewards')">
+      <span class="ni-icon">🎁</span> Ödüller
+    </div>
+    <div class="nav-item" onclick="showPage('report')">
+      <span class="ni-icon">📈</span> Raporlar
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div style="padding:14px 4px 0; border-top:1px solid var(--border)">
+      <div style="font-weight:800;color:var(--text);margin-bottom:2px">Pro İpucu</div>
+      Görev onayını aynı gün içinde yap — gecikmiş onaylar motivasyonu düşürür.
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <h1 id="page-title">Genel Özet</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="showPage('report')">📄 Rapor Al</button>
+      <button class="btn btn-primary btn-sm" onclick="showPage('tasks');setTimeout(()=>document.getElementById('task-name').focus(),100)">+ Görev Ekle</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="stat-grid">
+        <div class="stat-card purple">
+          <div class="sc-label">Toplam Puan</div>
+          <div class="sc-val" id="dash-pts">145</div>
+          <div class="sc-sub">+32 bu hafta</div>
+        </div>
+        <div class="stat-card teal">
+          <div class="sc-label">Bu Hafta Tamamlanan</div>
+          <div class="sc-val">18</div>
+          <div class="sc-sub">/ 24 görev</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="sc-label">Başarı Oranı</div>
+          <div class="sc-val">75%</div>
+          <div class="sc-sub">geçen hafta 68%</div>
+        </div>
+        <div class="stat-card green">
+          <div class="sc-label">Seri</div>
+          <div class="sc-val">4 🔥</div>
+          <div class="sc-sub">gün üst üste</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <h2>Bekleyen Onaylar</h2>
+        <span class="sh-count" id="dash-pending-count">2 bekliyor</span>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('approvals')">Tümünü Gör →</button>
+      </div>
+      <div class="pending-grid" id="dash-approvals"></div>
+
+      <div class="section-header" style="margin-top:12px">
+        <h2>Haftalık Özet Grafiği</h2>
+      </div>
+      <div class="report-card" style="margin-bottom:0">
+        <div class="bar-chart" id="dash-bar-chart"></div>
+      </div>
+    </div>
+
+    <!-- ── APPROVALS ── -->
+    <div class="page" id="page-approvals">
+      <div class="section-header">
+        <h2>Onay Bekleyen Görevler</h2>
+        <span class="sh-count" id="appr-count">2 bekliyor</span>
+      </div>
+      <div class="pending-grid" id="full-approvals"></div>
+    </div>
+
+    <!-- ── TASKS ── -->
+    <div class="page" id="page-tasks">
+      <div class="task-manager-layout">
+        <!-- left: task list -->
+        <div>
+          <div class="section-header" style="margin-bottom:12px">
+            <h2>Görev Listesi</h2>
+            <span style="font-size:12px;color:var(--muted);font-weight:700" id="task-count-label">4 görev</span>
+          </div>
+          <div class="task-list-table">
+            <div class="tlt-header">
+              <span>Görev</span><span>Puan</span><span>Süre</span><span>Tekrar</span><span>Kategori</span><span></span>
+            </div>
+            <div id="task-table-body"></div>
+          </div>
+        </div>
+        <!-- right: form -->
+        <div>
+          <div class="task-form-panel">
+            <div class="tfp-title" id="form-title">Yeni Görev Ekle</div>
+            <!-- templates -->
+            <div class="form-group">
+              <label class="form-label">Hızlı Şablon</label>
+              <div class="template-chips" id="template-chips"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Görev Adı</label>
+              <input class="form-input" id="task-name" placeholder="ör: Diş Fırçalama">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori</label>
+              <select class="form-input form-select" id="task-cat">
+                <option value="rutin">🌅 Rutin</option>
+                <option value="ev">🏠 Ev</option>
+                <option value="okul">📚 Okul</option>
+                <option value="hareket">⚽ Hareket</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tekrar</label>
+              <select class="form-input form-select" id="task-recur">
+                <option value="daily">Her gün</option>
+                <option value="weekdays">Hafta içi</option>
+                <option value="weekly">Haftada bir</option>
+                <option value="custom">Seçili günler</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Süre (dk)</label>
+              <input class="form-input" id="task-dur" type="number" value="15" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Puanlar</label>
+              <div class="pts-row">
+                <div class="pts-cell">
+                  <span class="pc-label">Temel ⭐</span>
+                  <input class="pts-input positive" id="pts-base" type="number" value="10">
+                </div>
+                <div class="pts-cell">
+                  <span class="pc-label">Çok İyi 🌟</span>
+                  <input class="pts-input positive" id="pts-great" type="number" value="10">
+                </div>
+                <div class="pts-cell">
+                  <span class="pc-label">Kaçırma ✕</span>
+                  <input class="pts-input negative" id="pts-miss" type="number" value="-5">
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Alt Görevler (isteğe bağlı)</label>
+              <div class="subtasks-input" id="subtasks-input">
+                <div class="subtask-row">
+                  <input class="form-input" placeholder="1. adım">
+                  <button class="btn-remove-sub" onclick="removeSubtask(this)">✕</button>
+                </div>
+              </div>
+              <button class="btn-add-sub" onclick="addSubtaskField()" style="width:100%;margin-top:5px;border-radius:var(--radius-sm);height:32px">+ Alt görev ekle</button>
+            </div>
+            <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="saveTask()" id="btn-save-task">Görevi Kaydet</button>
+            <button class="btn btn-ghost" style="width:100%;padding:10px;font-size:13px;margin-top:6px" onclick="resetTaskForm()" id="btn-cancel-task" style="display:none">İptal</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CALENDAR ── -->
+    <div class="page" id="page-calendar">
+      <div class="week-nav">
+        <button class="week-nav-btn" onclick="changeWeek(-1)">‹</button>
+        <h3 id="week-label">Bu Hafta</h3>
+        <button class="week-nav-btn" onclick="changeWeek(1)">›</button>
+        <button class="btn btn-ghost btn-sm" onclick="goToday()">Bugün</button>
+      </div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+      <div class="section-header">
+        <h2>Haftalık Başarı Özeti</h2>
+      </div>
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card green"><div class="sc-label">Tamamlanan</div><div class="sc-val">18</div><div class="sc-sub">görev</div></div>
+        <div class="stat-card amber"><div class="sc-label">Bekleyen</div><div class="sc-val">2</div><div class="sc-sub">onay</div></div>
+        <div class="stat-card coral sc-val-coral" style="--coral-val:var(--coral)"><div class="sc-label">Kaçırılan</div><div class="sc-val" style="color:var(--coral)">4</div><div class="sc-sub">görev</div></div>
+        <div class="stat-card purple"><div class="sc-label">Kazanılan</div><div class="sc-val">+87</div><div class="sc-sub">⭐ puan</div></div>
+      </div>
+    </div>
+
+    <!-- ── REWARDS ── -->
+    <div class="page" id="page-rewards">
+      <div class="rewards-layout">
+        <div>
+          <div class="section-header">
+            <h2>Ödül Kataloğu</h2>
+            <button class="btn btn-primary btn-sm" onclick="document.getElementById('reward-name').focus()">+ Ödül Ekle</button>
+          </div>
+          <div class="reward-grid" id="reward-grid"></div>
+        </div>
+        <!-- reward form -->
+        <div>
+          <div class="task-form-panel">
+            <div class="tfp-title">Yeni Ödül Ekle</div>
+            <div class="form-group">
+              <label class="form-label">Ödül Adı</label>
+              <input class="form-input" id="reward-name" placeholder="ör: Film Gecesi">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Emoji / İkon</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px" id="emoji-picker">
+                🎮🍦🎬🎡🧸🎯🎨🚴🍕🎪🏖️🎠🎆🎁
+                <span style="font-size:11px;color:var(--muted);font-weight:700;align-self:center">tıkla seç</span>
+              </div>
+              <input class="form-input" id="reward-icon" placeholder="veya emoji yaz: 🎮" style="font-size:20px" value="🎁">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gerekli Puan</label>
+              <input class="form-input" id="reward-pts" type="number" value="100" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stok (0 = sınırsız)</label>
+              <input class="form-input" id="reward-stock" type="number" value="0" min="0">
+            </div>
+            <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="saveReward()">Ödülü Kaydet</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REPORT ── -->
+    <div class="page" id="page-report">
+      <div style="display:flex;gap:8px;margin-bottom:24px">
+        <button class="btn btn-ghost btn-sm active-period" onclick="setPeriod('week',this)">Bu Hafta</button>
+        <button class="btn btn-ghost btn-sm" onclick="setPeriod('month',this)">Bu Ay</button>
+        <button class="btn btn-ghost btn-sm" onclick="setPeriod('all',this)">Tüm Zamanlar</button>
+        <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="exportReport()">📄 PDF Çıktısı</button>
+      </div>
+      <div class="report-layout">
+        <div class="report-card">
+          <h3>Günlük Tamamlanma (Bu Hafta)</h3>
+          <div class="bar-chart" id="report-bar"></div>
+        </div>
+        <div class="report-card">
+          <h3>Kategori Dağılımı</h3>
+          <div class="cat-breakdown" id="report-cats"></div>
+        </div>
+        <div class="report-card">
+          <h3>Son 30 Gün — Seri Takibi</h3>
+          <div class="streak-history" id="report-streak"></div>
+        </div>
+        <div class="report-card">
+          <h3>Klinik Öngörüler 🔬</h3>
+          <div class="insights-list" id="report-insights"></div>
+        </div>
+      </div>
+      <div class="report-card" style="margin-top:0">
+        <h3>Terapist Paylaşım Notu</h3>
+        <p style="font-size:12px;color:var(--muted);font-weight:600;line-height:1.6;margin-top:8px">
+          Bu haftaki özet: Ali 24 görevden 18'ini tamamladı (%75 başarı oranı). En başarılı kategori "Rutin" (%92), en zorlandığı alan "Okul Ödevi" (%58). Ardışık 4 günlük seri kırıldı — 2 gün önce ödevlerde motivasyon düşüşü gözlemlendi. Sabah rutini tutarlı olarak tamamlanıyor; akşam görevlerinde daha fazla hatırlatma gerekiyor.
+        </p>
+        <button class="btn btn-teal btn-sm" style="margin-top:12px" onclick="copyReport()">📋 Terapiste Kopyala</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Approval edit modal -->
+<div class="modal-overlay" id="edit-modal" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3>Puanı Düzenle</h3>
+    <p>Ebeveyn olarak kalite puanını ve notunu düzenleyebilirsin.</p>
+    <div class="form-group">
+      <label class="form-label">Kalite</label>
+      <select class="form-input form-select" id="edit-quality">
+        <option value="great">🌟 Çok İyi</option>
+        <option value="good">😊 İyi</option>
+        <option value="ok">🙂 Tamamlandı</option>
+        <option value="late">⏰ Geç</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ebeveyn Notu (isteğe bağlı)</label>
+      <input class="form-input" id="edit-note" placeholder="ör: Çok güzel iş çıkardın!">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
+      <button class="btn btn-primary" onclick="saveEditedApproval()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toast-icon">✅</span>
+  <span id="toast-msg">Görev onaylandı</span>
+</div>
+
+<script>
+// ── STATE ──
+let currentPage = 'dashboard';
+let totalPoints = 145;
+let editingApprovalId = null;
+
+const tasks = [
+  { id:1, name:'Diş Fırçalama', icon:'🦷', cat:'rutin', recur:'daily', dur:5,  pts:10, great:5,  miss:-3, subtasks:['Fırçayı ıslatmak','2 dk fırçalamak','Ağzı çalkalamak'] },
+  { id:2, name:'Oda Toplama',   icon:'🧹', cat:'ev',    recur:'daily', dur:15, pts:10, great:10, miss:-10, subtasks:['Yatağı düzelt','Oyuncakları topla','Masayı sil'] },
+  { id:3, name:'Matematik Ödevi', icon:'📐', cat:'okul', recur:'weekdays', dur:20, pts:15, great:10, miss:-15, subtasks:['Soruları çöz','Kontrol et'] },
+  { id:4, name:'30 Dk Egzersiz', icon:'⚽', cat:'hareket', recur:'daily', dur:30, pts:12, great:8, miss:-10, subtasks:[] },
+];
+
+const pendingApprovals = [
+  { id:1, taskId:2, taskName:'Oda Toplama', icon:'🧹', quality:'great', pts:20, time:'13:45', child:'Ali' },
+  { id:2, taskId:4, taskName:'30 Dk Egzersiz', icon:'⚽', quality:'ok', pts:12, time:'17:20', child:'Ali' },
+];
+
+const rewards = [
+  { id:1, name:'Ekstra Oyun', icon:'🎮', pts:50,  stock:0 },
+  { id:2, name:'Dondurma',    icon:'🍦', pts:80,  stock:2 },
+  { id:3, name:'Film Gecesi', icon:'🎬', pts:120, stock:0 },
+  { id:4, name:'Park Gezisi', icon:'🎡', pts:200, stock:0 },
+  { id:5, name:'Oyuncak',     icon:'🧸', pts:350, stock:1 },
+];
+
+const templates = [
+  {name:'Diş Fırçalama',icon:'🦷',cat:'rutin',dur:5, pts:10},
+  {name:'Yatak Yapma',  icon:'🛏',cat:'ev',   dur:5, pts:8},
+  {name:'Oda Toplama',  icon:'🧹',cat:'ev',   dur:15,pts:10},
+  {name:'Ödev',         icon:'📚',cat:'okul', dur:30,pts:15},
+  {name:'Egzersiz',     icon:'⚽',cat:'hareket',dur:30,pts:12},
+  {name:'Kitap Okuma',  icon:'📖',cat:'okul', dur:20,pts:10},
+  {name:'Sofra Kurma',  icon:'🍽',cat:'ev',   dur:5, pts:7},
+  {name:'Duş/Banyo',    icon:'🚿',cat:'rutin',dur:15,pts:8},
+];
+
+const weekData = [
+  {day:'Pt', done:4, total:4},
+  {day:'Sa', done:3, total:4},
+  {day:'Ça', done:4, total:4},
+  {day:'Pe', done:2, total:4},
+  {day:'Cu', done:3, total:4},
+  {day:'Ct', done:1, total:3},
+  {day:'Pz', done:1, total:3},
+];
+
+// ── NAV ──
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const navMap = {dashboard:0,approvals:1,tasks:2,calendar:3,rewards:4,report:5};
+  const idx = navMap[id];
+  document.querySelectorAll('.nav-item')[idx]?.classList.add('active');
+  const titles = {dashboard:'Genel Özet',approvals:'Onaylar',tasks:'Görev Yöneticisi',calendar:'Haftalık Takvim',rewards:'Ödül Kataloğu',report:'Raporlar & Analiz'};
+  document.getElementById('page-title').textContent = titles[id]||id;
+  currentPage = id;
+  if(id==='dashboard') renderDashboard();
+  if(id==='approvals') renderFullApprovals();
+  if(id==='tasks')     renderTaskTable();
+  if(id==='calendar')  renderCalendar();
+  if(id==='rewards')   renderRewards();
+  if(id==='report')    renderReport();
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  document.getElementById('dash-pts').textContent = totalPoints;
+  document.getElementById('dash-pending-count').textContent = pendingApprovals.length+' bekliyor';
+  renderApprovalCards('dash-approvals', pendingApprovals.slice(0,2));
+  renderBarChart('dash-bar-chart', weekData);
+}
+
+function renderBarChart(elId, data) {
+  const el = document.getElementById(elId);
+  el.innerHTML = data.map(d=>{
+    const pct = Math.round((d.done/d.total)*100);
+    return `
+    <div class="bar-row">
+      <span class="bar-label">${d.day}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <span class="bar-val">${d.done}/${d.total}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── APPROVALS ──
+function renderApprovalCards(elId, items) {
+  const el = document.getElementById(elId);
+  if(!items.length) {
+    el.innerHTML = '<div class="empty-state"><span class="es-icon">🎉</span>Bekleyen onay yok!</div>';
+    return;
+  }
+  el.innerHTML = items.map(a=>`
+    <div class="approval-card" id="appr-${a.id}">
+      <div class="appr-icon">${a.icon}</div>
+      <div class="appr-body">
+        <h3>${a.taskName}</h3>
+        <div class="ab-meta">
+          <span>${a.child}</span>
+          <span>Bugün ${a.time}</span>
+        </div>
+      </div>
+      <span class="appr-quality q-${a.quality}">${qualityLabel(a.quality)}</span>
+      <span class="appr-pts">+${a.pts} ⭐</span>
+      <div class="appr-actions">
+        <button class="icon-btn edit"    onclick="editApproval(${a.id})"   title="Düzenle">✏️</button>
+        <button class="icon-btn reject"  onclick="rejectApproval(${a.id})" title="Reddet">✕</button>
+        <button class="icon-btn approve" onclick="approveApproval(${a.id})" title="Onayla">✓</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderFullApprovals() {
+  document.getElementById('appr-count').textContent = pendingApprovals.length+' bekliyor';
+  renderApprovalCards('full-approvals', pendingApprovals);
+}
+
+function qualityLabel(q) {
+  return {great:'🌟 Çok İyi',good:'😊 İyi',ok:'🙂 Tamamlandı',late:'⏰ Geç'}[q]||q;
+}
+
+function approveApproval(id) {
+  const idx = pendingApprovals.findIndex(a=>a.id===id);
+  if(idx<0) return;
+  const a = pendingApprovals[idx];
+  totalPoints += a.pts;
+  pendingApprovals.splice(idx,1);
+  updateBadge();
+  showToast('✅', `${a.taskName} onaylandı! +${a.pts} ⭐`);
+  if(currentPage==='dashboard') renderDashboard();
+  if(currentPage==='approvals') renderFullApprovals();
+  document.getElementById('dash-pts').textContent = totalPoints;
+  document.getElementById('child0-pts').textContent = '⭐ '+totalPoints+' puan';
+}
+
+function rejectApproval(id) {
+  const idx = pendingApprovals.findIndex(a=>a.id===id);
+  if(idx<0) return;
+  const a = pendingApprovals[idx];
+  pendingApprovals.splice(idx,1);
+  updateBadge();
+  showToast('❌', `${a.taskName} reddedildi`);
+  if(currentPage==='dashboard') renderDashboard();
+  if(currentPage==='approvals') renderFullApprovals();
+}
+
+function editApproval(id) {
+  editingApprovalId = id;
+  const a = pendingApprovals.find(x=>x.id===id);
+  document.getElementById('edit-quality').value = a.quality;
+  document.getElementById('edit-note').value = '';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function saveEditedApproval() {
+  const a = pendingApprovals.find(x=>x.id===editingApprovalId);
+  if(!a) return;
+  a.quality = document.getElementById('edit-quality').value;
+  closeModal();
+  if(currentPage==='dashboard') renderDashboard();
+  if(currentPage==='approvals') renderFullApprovals();
+  showToast('✏️','Onay güncellendi');
+}
+
+function updateBadge() {
+  document.getElementById('approval-badge').textContent = pendingApprovals.length||'';
+  document.getElementById('approval-badge').style.display = pendingApprovals.length?'':'none';
+  document.getElementById('dash-pending-count').textContent = pendingApprovals.length+' bekliyor';
+}
+
+// ── TASK TABLE ──
+function renderTaskTable() {
+  document.getElementById('task-count-label').textContent = tasks.length+' görev';
+  const body = document.getElementById('task-table-body');
+  body.innerHTML = tasks.map(t=>`
+    <div class="task-row">
+      <div class="tr-name">
+        <span class="tn-icon">${t.icon}</span>
+        <div class="tn-text"><h4>${t.name}</h4><p>${t.subtasks.length} alt görev</p></div>
+      </div>
+      <div class="tr-pts">+${t.pts}</div>
+      <div class="tr-time">${t.dur} dk</div>
+      <div class="tr-recur"><span class="badge-pill bp-${t.recur==='daily'?'daily':'weekly'}">${recurLabel(t.recur)}</span></div>
+      <div><span class="badge-pill bp-${t.cat}">${catLabel(t.cat)}</span></div>
+      <div class="tr-actions">
+        <button class="icon-btn edit" onclick="loadTaskToForm(${t.id})" title="Düzenle">✏️</button>
+        <button class="icon-btn reject" onclick="deleteTask(${t.id})" title="Sil">🗑</button>
+      </div>
+    </div>
+  `).join('');
+  renderTemplateChips();
+}
+
+function recurLabel(r) {
+  return {daily:'Her gün',weekdays:'Hafta içi',weekly:'Haftalık',custom:'Özel'}[r]||r;
+}
+function catLabel(c) {
+  return {rutin:'🌅 Rutin',ev:'🏠 Ev',okul:'📚 Okul',hareket:'⚽ Hareket'}[c]||c;
+}
+function catIcon(c) {
+  return {rutin:'🌅',ev:'🏠',okul:'📚',hareket:'⚽'}[c]||'📋';
+}
+
+function renderTemplateChips() {
+  const el = document.getElementById('template-chips');
+  el.innerHTML = templates.map(t=>`
+    <button class="template-chip" onclick="applyTemplate(${templates.indexOf(t)})">${t.icon} ${t.name}</button>
+  `).join('');
+}
+
+function applyTemplate(idx) {
+  const t = templates[idx];
+  document.getElementById('task-name').value = t.name;
+  document.getElementById('task-cat').value  = t.cat;
+  document.getElementById('task-dur').value  = t.dur;
+  document.getElementById('pts-base').value  = t.pts;
+  document.getElementById('pts-great').value = Math.round(t.pts*0.7);
+  document.getElementById('pts-miss').value  = -Math.round(t.pts*0.5);
+}
+
+function saveTask() {
+  const name = document.getElementById('task-name').value.trim();
+  if(!name) { showToast('⚠️','Görev adı boş olamaz'); return; }
+  const newTask = {
+    id: Date.now(),
+    name,
+    icon: catIcon(document.getElementById('task-cat').value),
+    cat:  document.getElementById('task-cat').value,
+    recur:document.getElementById('task-recur').value,
+    dur:  parseInt(document.getElementById('task-dur').value)||10,
+    pts:  parseInt(document.getElementById('pts-base').value)||10,
+    great:parseInt(document.getElementById('pts-great').value)||5,
+    miss: parseInt(document.getElementById('pts-miss').value)||-5,
+    subtasks: Array.from(document.querySelectorAll('#subtasks-input .form-input'))
+               .map(i=>i.value.trim()).filter(Boolean),
+  };
+  tasks.push(newTask);
+  renderTaskTable();
+  resetTaskForm();
+  showToast('✅',`"${name}" görevi eklendi`);
+}
+
+function loadTaskToForm(id) {
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  document.getElementById('task-name').value  = t.name;
+  document.getElementById('task-cat').value   = t.cat;
+  document.getElementById('task-recur').value = t.recur;
+  document.getElementById('task-dur').value   = t.dur;
+  document.getElementById('pts-base').value   = t.pts;
+  document.getElementById('pts-great').value  = t.great;
+  document.getElementById('pts-miss').value   = t.miss;
+  document.getElementById('form-title').textContent = 'Görevi Düzenle';
+}
+
+function deleteTask(id) {
+  const idx = tasks.findIndex(t=>t.id===id);
+  if(idx<0) return;
+  const name = tasks[idx].name;
+  tasks.splice(idx,1);
+  renderTaskTable();
+  showToast('🗑',`"${name}" silindi`);
+}
+
+function resetTaskForm() {
+  document.getElementById('task-name').value='';
+  document.getElementById('pts-base').value=10;
+  document.getElementById('pts-great').value=10;
+  document.getElementById('pts-miss').value=-5;
+  document.getElementById('task-dur').value=15;
+  document.getElementById('form-title').textContent='Yeni Görev Ekle';
+  document.getElementById('subtasks-input').innerHTML=`<div class="subtask-row"><input class="form-input" placeholder="1. adım"><button class="btn-remove-sub" onclick="removeSubtask(this)">✕</button></div>`;
+}
+
+function addSubtaskField() {
+  const cont = document.getElementById('subtasks-input');
+  const n = cont.children.length+1;
+  const row = document.createElement('div');
+  row.className='subtask-row';
+  row.innerHTML=`<input class="form-input" placeholder="${n}. adım"><button class="btn-remove-sub" onclick="removeSubtask(this)">✕</button>`;
+  cont.appendChild(row);
+}
+
+function removeSubtask(btn) {
+  const row = btn.closest('.subtask-row');
+  if(document.querySelectorAll('#subtasks-input .subtask-row').length>1) row.remove();
+}
+
+// ── CALENDAR ──
+let weekOffset = 0;
+const DAYS = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+const calData = {
+  0:{ 0:['done'],   1:['done'],   2:['done'],   3:['done'],   4:['done'],   5:['done'],   6:['done']   },
+  1:{ 0:['done'],   1:['done'],   2:['done'],   3:['missed'],  4:['done'],   5:['pending'],6:['empty']  },
+  2:{ 0:['done'],   1:['missed'], 2:['done'],   3:['done'],   4:['missed'], 5:['done'],   6:['empty']  },
+  3:{ 0:['done'],   1:['done'],   2:['pending'],3:['done'],   4:['done'],   5:['empty'],  6:['empty']  },
+};
+
+function renderCalendar() {
+  const grid = document.getElementById('calendar-grid');
+  const today = 3; // Perşembe = idx 3 (0-based)
+  grid.innerHTML = '';
+  // header row
+  const cornerCell = document.createElement('div');
+  cornerCell.className='cal-header-cell';
+  grid.appendChild(cornerCell);
+  DAYS.forEach((d,i)=>{
+    const c = document.createElement('div');
+    c.className=`cal-header-cell day-label${i===today?' today':''}`;
+    c.innerHTML = `<div>${d}</div><div class="day-num${i===today?' today':''}">${i+1}</div>`;
+    grid.appendChild(c);
+  });
+  // task rows
+  tasks.forEach((t,ti)=>{
+    const lbl = document.createElement('div');
+    lbl.className='cal-row-label';
+    lbl.innerHTML=`<span class="crl-icon">${t.icon}</span><span class="crl-name">${t.name}</span>`;
+    grid.appendChild(lbl);
+    DAYS.forEach((_,di)=>{
+      const cell = document.createElement('div');
+      cell.className=`cal-cell${di===today?' today-col':''}`;
+      const state = (calData[ti]||{})[di]||['empty'];
+      const s = state[0];
+      const labels={done:'✓',pending:'⏳',missed:'✕',empty:'·'};
+      cell.innerHTML=`<span class="cal-chip ${s}">${labels[s]}</span>`;
+      cell.onclick=()=>showToast('📅',`${t.name} — ${DAYS[di]}: ${({done:'Tamamlandı',pending:'Onay bekliyor',missed:'Kaçırıldı',empty:'Henüz yok'})[s]}`);
+      grid.appendChild(cell);
+    });
+  });
+}
+
+function changeWeek(dir) {
+  weekOffset += dir;
+  document.getElementById('week-label').textContent =
+    weekOffset===0?'Bu Hafta':weekOffset<0?`${Math.abs(weekOffset)} Hafta Önce`:`${weekOffset} Hafta Sonra`;
+  renderCalendar();
+}
+function goToday() { weekOffset=0; document.getElementById('week-label').textContent='Bu Hafta'; renderCalendar(); }
+
+// ── REWARDS ──
+function renderRewards() {
+  const grid = document.getElementById('reward-grid');
+  grid.innerHTML = rewards.map(r=>{
+    const pct = Math.min(100,(totalPoints/r.pts)*100);
+    const avail = totalPoints >= r.pts;
+    return `
+    <div class="reward-mgmt-card">
+      <span class="rmc-icon">${r.icon}</span>
+      <div class="rmc-name">${r.name}</div>
+      <div class="rmc-pts">⭐ ${r.pts} puan</div>
+      <div class="rmc-progress"><div class="rmc-fill" style="width:${pct}%"></div></div>
+      <div class="rmc-status ${avail?'available':'locked'}">${avail?'✅ Kazanıldı!':totalPoints+' / '+r.pts}</div>
+      <div class="rmc-actions">
+        <button class="btn btn-ghost btn-sm" onclick="deleteReward(${r.id})">🗑 Sil</button>
+        ${avail?`<button class="btn btn-green btn-sm" onclick="claimReward(${r.id})">Onayla</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  initEmojiPicker();
+}
+
+function initEmojiPicker() {
+  const picker = document.getElementById('emoji-picker');
+  if(!picker) return;
+  picker.querySelectorAll('span:not(:last-child)').forEach(()=>{});
+  const emojis = '🎮🍦🎬🎡🧸🎯🎨🚴🍕🎪🏖️🎠🎆🎁'.split(/(?<=\p{Emoji})/u).filter(Boolean);
+  picker.innerHTML = emojis.map(e=>`<span style="cursor:pointer;font-size:22px" onclick="document.getElementById('reward-icon').value='${e}'">${e}</span>`).join('') +
+    `<span style="font-size:11px;color:var(--muted);font-weight:700;align-self:center;margin-left:4px">seç</span>`;
+}
+
+function saveReward() {
+  const name = document.getElementById('reward-name').value.trim();
+  if(!name) { showToast('⚠️','Ödül adı boş olamaz'); return; }
+  rewards.push({
+    id:Date.now(),
+    name,
+    icon:document.getElementById('reward-icon').value||'🎁',
+    pts:parseInt(document.getElementById('reward-pts').value)||100,
+    stock:parseInt(document.getElementById('reward-stock').value)||0,
+  });
+  document.getElementById('reward-name').value='';
+  renderRewards();
+  showToast('🎁',`"${name}" ödülü eklendi`);
+}
+
+function deleteReward(id) {
+  const idx = rewards.findIndex(r=>r.id===id);
+  if(idx<0) return;
+  const name = rewards[idx].name;
+  rewards.splice(idx,1);
+  renderRewards();
+  showToast('🗑',`"${name}" silindi`);
+}
+
+function claimReward(id) {
+  const r = rewards.find(x=>x.id===id);
+  if(!r) return;
+  if(r.stock>0) r.stock--;
+  showToast('🎉',`"${r.name}" ödülü verildi!`);
+  renderRewards();
+}
+
+// ── REPORT ──
+function renderReport() {
+  renderBarChart('report-bar', weekData);
+  document.getElementById('report-cats').innerHTML = [
+    {name:'🌅 Rutin',  pct:92, color:'var(--teal)'},
+    {name:'🏠 Ev',     pct:78, color:'var(--amber)'},
+    {name:'📚 Okul',   pct:58, color:'var(--blue)'},
+    {name:'⚽ Hareket',pct:83, color:'var(--coral)'},
+  ].map(c=>`
+    <div class="cat-row">
+      <span class="cat-dot" style="background:${c.color}"></span>
+      <span class="cat-name">${c.name}</span>
+      <div class="bar-track" style="max-width:120px"><div class="bar-fill" style="width:${c.pct}%;background:${c.color}"></div></div>
+      <span class="cat-pct">%${c.pct}</span>
+    </div>
+  `).join('');
+  const streakEl = document.getElementById('report-streak');
+  const types = ['full','full','full','full','partial','empty','full','full','partial','full',
+                 'full','empty','full','full','full','full','partial','full','full','full',
+                 'full','empty','empty','full','full','full','full','full','full','empty'];
+  streakEl.innerHTML = types.map((t,i)=>`<div class="sh-dot ${t}">${i+1}</div>`).join('');
+  document.getElementById('report-insights').innerHTML = [
+    {type:'good', icon:'⭐', text:'Sabah rutininde %92 başarı — harika tutarlılık!'},
+    {type:'warn', icon:'📚', text:'Okul ödevlerinde motivasyon düşüşü var. 20 dk. yerine 10 dk. görev deneyin.'},
+    {type:'info', icon:'🕕', text:'En verimli saat 14:00-16:00. Ödevleri bu saate almayı deneyin.'},
+    {type:'warn', icon:'🌙', text:'Akşam 19:00 sonrası görevlerde %40 kaçırma oranı. Hatırlatıcı eklenebilir.'},
+    {type:'good', icon:'🔥', text:'4 günlük seri kırılmadan önce 7 günlük rekor kırıldı!'},
+  ].map(i=>`<div class="insight-item ${i.type}"><span class="ii-icon">${i.icon}</span><span>${i.text}</span></div>`).join('');
+}
+
+function setPeriod(p, btn) {
+  document.querySelectorAll('.active-period').forEach(b=>b.classList.remove('active-period','btn-primary'));
+  btn.classList.add('active-period','btn-primary');
+  renderReport();
+  showToast('📊',`${p==='week'?'Bu hafta':p==='month'?'Bu ay':'Tüm zamanlar'} gösteriliyor`);
+}
+
+function exportReport() { showToast('📄','PDF raporu hazırlanıyor... (gerçek uygulamada indirilir)'); }
+function copyReport() { showToast('📋','Terapist notu panoya kopyalandı'); }
+
+// ── MODAL ──
+function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+// ── TOAST ──
+let toastTimer;
+function showToast(icon, msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-icon').textContent=icon;
+  document.getElementById('toast-msg').textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── CHILD SWITCHER ──
+function selectChild(idx) {
+  document.querySelectorAll('.child-card').forEach((c,i)=>c.classList.toggle('active',i===idx));
+  showToast('👶',idx===0?'Ali seçildi':'Ayşe seçildi');
+}
+
+// ── INIT ──
+showPage('dashboard');
+</script>
+</body>
+</html>
