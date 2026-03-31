@@ -1390,43 +1390,34 @@ function logout() {
 
 // ── AİLE YÖNETİMİ ──
 let editingChildId = null;
-const AVATARS = ['🦸','🦋','🐯','🦊','🐸','🐧','🦁','🐼','🐨','🦄','🐙','🦖','🐳','🌟','⚡','🎮'];
+let childrenData   = [];
+const AVATARS    = ['🦸','🦋','🐯','🦊','🐸','🐧','🦁','🐼','🐨','🦄','🐙','🦖','🐳','🌟','⚡','🎮'];
 const AGE_GROUPS = { young: '6–9 yaş', teen: '9–13 yaş' };
 
-// Demo çocuk verisi (API bağlantısında bu FamilyAPI'den gelecek)
-let childrenData = [
-  { id:1, name:'Ali',  avatar:'🦸', age_group:'young', total_points:145, total_completions:24, approved_completions:18 },
-  { id:2, name:'Ayşe', avatar:'🦋', age_group:'young', total_points:210, total_completions:30, approved_completions:26 },
-];
-
-function renderFamilyPage() {
+async function renderFamilyPage() {
   const cont = document.getElementById('page-family');
   cont.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 360px;gap:20px">
-      <!-- Sol: çocuk listesi -->
       <div>
         <div class="section-header" style="margin-bottom:14px">
           <h2>Çocuk Profilleri</h2>
           <button class="btn btn-primary btn-sm" onclick="openChildModal()">+ Yeni Çocuk</button>
         </div>
-        <div id="children-list"></div>
+        <div id="children-list"><div class="empty-state"><span class="es-icon">⏳</span>Yükleniyor...</div></div>
       </div>
-      <!-- Sağ: aile kodu -->
       <div>
         <div class="task-form-panel">
           <div class="tfp-title">Aile Bilgileri</div>
           <div class="form-group">
             <label class="form-label">Aile Kodu</label>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="form-input" style="font-size:22px;font-weight:900;letter-spacing:.1em;color:var(--purple);background:var(--purple-bg);border-color:var(--purple);text-align:center">1</div>
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;font-weight:600">Bu kodu çocuğunuzla paylaşın. Çocuk giriş ekranında bu kodu kullanarak hesabına erişir.</div>
+            <div class="form-input" style="font-size:22px;font-weight:900;letter-spacing:.1em;color:var(--purple);background:var(--purple-bg);border-color:var(--purple);text-align:center" id="family-code-display">—</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;font-weight:600">Bu kodu çocuğunuzla paylaşın.</div>
           </div>
           <div class="form-group" style="margin-top:16px">
             <label class="form-label">Manuel Puan Ekle / Çıkar</label>
             <div id="manual-pts-child-select" style="margin-bottom:8px"></div>
             <div style="display:flex;gap:8px">
-              <input class="form-input" id="manual-delta" type="number" placeholder="ör: +50 veya -10" style="flex:1">
+              <input class="form-input" id="manual-delta" type="number" placeholder="ör: 50 veya -10" style="flex:1">
               <input class="form-input" id="manual-reason" placeholder="Sebep" style="flex:2">
             </div>
             <button class="btn btn-amber" style="width:100%;margin-top:8px;padding:10px" onclick="applyManualPoints()">Puanı Uygula</button>
@@ -1434,8 +1425,7 @@ function renderFamilyPage() {
         </div>
       </div>
     </div>
-
-    <!-- Çocuk ekle/düzenle modal -->
+    <!-- Çocuk modal -->
     <div class="modal-overlay" id="child-modal" onclick="closeChildModal()">
       <div class="modal-box" onclick="event.stopPropagation()" style="max-width:460px">
         <h3 id="child-modal-title">Yeni Çocuk Ekle</h3>
@@ -1448,34 +1438,49 @@ function renderFamilyPage() {
           <label class="form-label">Yaş Grubu</label>
           <div style="display:flex;gap:8px">
             <button class="age-btn active" data-age="young" onclick="selectAge('young',this)">🧒 6–9 yaş</button>
-            <button class="age-btn" data-age="teen"  onclick="selectAge('teen',this)">👦 9–13 yaş</button>
+            <button class="age-btn" data-age="teen" onclick="selectAge('teen',this)">👦 9–13 yaş</button>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Avatar Seç</label>
           <div class="avatar-grid" id="avatar-grid"></div>
         </div>
-        <div class="modal-actions" style="margin-top:4px">
+        <div id="child-modal-error" style="display:none;font-size:12px;color:var(--coral);padding:8px 12px;background:var(--coral-bg);border-radius:8px;margin-bottom:8px"></div>
+        <div class="modal-actions">
           <button class="btn btn-ghost" onclick="closeChildModal()">İptal</button>
-          <button class="btn btn-primary" onclick="saveChild()">Kaydet</button>
+          <button class="btn btn-primary" id="btn-save-child" onclick="saveChild()">Kaydet</button>
         </div>
       </div>
     </div>
-
     <!-- Silme onay modal -->
     <div class="modal-overlay" id="delete-child-modal" onclick="document.getElementById('delete-child-modal').classList.remove('open')">
       <div class="modal-box" onclick="event.stopPropagation()">
         <h3>Profili Sil</h3>
-        <p id="delete-child-msg">Bu çocuğun tüm verileri (görevler, puanlar, geçmiş) kalıcı olarak silinecek. Emin misiniz?</p>
+        <p id="delete-child-msg"></p>
         <div class="modal-actions">
           <button class="btn btn-ghost" onclick="document.getElementById('delete-child-modal').classList.remove('open')">İptal</button>
-          <button class="btn btn-coral" onclick="confirmDeleteChild()">Evet, Sil</button>
+          <button class="btn btn-coral" id="btn-confirm-delete" onclick="confirmDeleteChild()">Evet, Kalıcı Sil</button>
         </div>
       </div>
     </div>
   `;
+
+  // Aile kodunu göster (user'dan al)
+  const user = Auth.getUser();
+  if (user) document.getElementById('family-code-display').textContent = user.family_id || '—';
+
+  await loadChildren();
+}
+
+async function loadChildren() {
+  try {
+    childrenData = await FamilyAPI.listChildren();
+  } catch(e) {
+    childrenData = [];
+  }
   renderChildrenList();
   renderManualPtsSelect();
+  updateSidebarChildren();
 }
 
 function renderChildrenList() {
@@ -1486,11 +1491,12 @@ function renderChildrenList() {
     return;
   }
   cont.innerHTML = childrenData.map(c => {
-    const pct = c.total_completions > 0
-      ? Math.round((c.approved_completions / c.total_completions) * 100) : 0;
+    const total = c.total_completions || 0;
+    const done  = c.approved_completions || 0;
+    const pct   = total > 0 ? Math.round((done/total)*100) : 0;
     return `
     <div class="approval-card" style="margin-bottom:10px;align-items:center">
-      <div class="appr-icon" style="font-size:28px;width:52px;height:52px;border-radius:16px;background:var(--purple-bg)">${c.avatar}</div>
+      <div class="appr-icon" style="font-size:28px;width:52px;height:52px;border-radius:16px;background:var(--purple-bg)">${c.avatar||'🦸'}</div>
       <div class="appr-body" style="flex:1">
         <h3 style="font-size:15px">${c.name}</h3>
         <div class="ab-meta">
@@ -1505,7 +1511,7 @@ function renderChildrenList() {
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
-        <button class="icon-btn edit" onclick="openChildModal(${c.id})" title="Düzenle">✏️</button>
+        <button class="icon-btn edit"   onclick="openChildModal(${c.id})" title="Düzenle">✏️</button>
         <button class="icon-btn" style="background:var(--amber-bg);color:var(--amber)"
           onclick="openResetModal(${c.id},'${c.name}')" title="Puanları Sıfırla">🔄</button>
         <button class="icon-btn reject" onclick="openDeleteChildModal(${c.id},'${c.name}')" title="Sil">🗑</button>
@@ -1516,9 +1522,9 @@ function renderChildrenList() {
 
 function renderManualPtsSelect() {
   const el = document.getElementById('manual-pts-child-select');
-  if (!el) return;
+  if (!el || !childrenData.length) return;
   el.innerHTML = `<select class="form-input form-select" id="manual-child-id">
-    ${childrenData.map(c=>`<option value="${c.id}">${c.avatar} ${c.name}</option>`).join('')}
+    ${childrenData.map(c=>`<option value="${c.id}">${c.avatar||'🦸'} ${c.name}</option>`).join('')}
   </select>`;
 }
 
@@ -1527,40 +1533,33 @@ let selectedAgeForModal    = 'young';
 
 function openChildModal(childId = null) {
   editingChildId = childId;
-  const modal = document.getElementById('child-modal');
-  const title = document.getElementById('child-modal-title');
-  const sub   = document.getElementById('child-modal-sub');
+  selectedAvatarForModal = '🦸';
+  selectedAgeForModal    = 'young';
 
-  // Avatar grid
+  document.getElementById('child-modal-error').style.display = 'none';
   document.getElementById('avatar-grid').innerHTML = AVATARS.map(a =>
-    `<span class="avatar-opt${a===selectedAvatarForModal?' selected':''}"
-      onclick="selectAvatar('${a}',this)">${a}</span>`
+    `<span class="avatar-opt${a===selectedAvatarForModal?' selected':''}" onclick="selectAvatar('${a}',this)">${a}</span>`
   ).join('');
 
   if (childId) {
     const c = childrenData.find(x=>x.id===childId);
-    title.textContent = 'Profili Düzenle';
-    sub.textContent   = c.name + ' profilini düzenle';
-    document.getElementById('child-name-input').value = c.name;
-    selectedAvatarForModal = c.avatar;
+    if (!c) return;
+    document.getElementById('child-modal-title').textContent = 'Profili Düzenle';
+    document.getElementById('child-modal-sub').textContent   = c.name+' profilini düzenle';
+    document.getElementById('child-name-input').value        = c.name;
+    selectedAvatarForModal = c.avatar||'🦸';
     selectedAgeForModal    = c.age_group;
-    // Avatar seçimini güncelle
-    document.querySelectorAll('.avatar-opt').forEach(el => {
-      el.classList.toggle('selected', el.textContent === c.avatar);
-    });
-    // Yaş butonları
+    document.querySelectorAll('#avatar-grid .avatar-opt').forEach(el =>
+      el.classList.toggle('selected', el.textContent===c.avatar));
     document.querySelectorAll('.age-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.age === c.age_group));
+      b.classList.toggle('active', b.dataset.age===c.age_group));
   } else {
-    title.textContent = 'Yeni Çocuk Ekle';
-    sub.textContent   = 'Profil bilgilerini doldurun.';
-    document.getElementById('child-name-input').value = '';
-    selectedAvatarForModal = '🦸';
-    selectedAgeForModal    = 'young';
-    document.querySelectorAll('.age-btn').forEach((b,i) => b.classList.toggle('active', i===0));
-    document.querySelectorAll('.avatar-opt').forEach((el,i) => el.classList.toggle('selected', i===0));
+    document.getElementById('child-modal-title').textContent = 'Yeni Çocuk Ekle';
+    document.getElementById('child-modal-sub').textContent   = 'Profil bilgilerini doldurun.';
+    document.getElementById('child-name-input').value        = '';
+    document.querySelectorAll('.age-btn').forEach((b,i) => b.classList.toggle('active',i===0));
   }
-  modal.classList.add('open');
+  document.getElementById('child-modal').classList.add('open');
 }
 
 function closeChildModal() {
@@ -1576,225 +1575,295 @@ function selectAge(age, btn) {
 
 function selectAvatar(avatar, el) {
   selectedAvatarForModal = avatar;
-  document.querySelectorAll('.avatar-opt').forEach(a => a.classList.remove('selected'));
+  document.querySelectorAll('#avatar-grid .avatar-opt').forEach(a => a.classList.remove('selected'));
   el.classList.add('selected');
 }
 
-function saveChild() {
+async function saveChild() {
   const name = document.getElementById('child-name-input').value.trim();
-  if (!name) { showToast('⚠️','İsim boş olamaz'); return; }
+  if (!name) { showChildModalError('İsim boş olamaz'); return; }
 
-  if (editingChildId) {
-    const c = childrenData.find(x=>x.id===editingChildId);
-    if (c) { c.name = name; c.avatar = selectedAvatarForModal; c.age_group = selectedAgeForModal; }
-    showToast('✅', `${name} profili güncellendi`);
-  } else {
-    childrenData.push({
-      id: Date.now(), name,
-      avatar: selectedAvatarForModal,
-      age_group: selectedAgeForModal,
-      total_points: 0,
-      total_completions: 0,
-      approved_completions: 0
-    });
-    showToast('🎉', `${name} profili oluşturuldu!`);
+  const btn = document.getElementById('btn-save-child');
+  btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+
+  try {
+    if (editingChildId) {
+      await FamilyAPI.updateChild(editingChildId, {
+        name, age_group: selectedAgeForModal, avatar: selectedAvatarForModal
+      });
+      showToast('✅', `${name} profili güncellendi`);
+    } else {
+      await FamilyAPI.addChild({
+        name, age_group: selectedAgeForModal, avatar: selectedAvatarForModal
+      });
+      showToast('🎉', `${name} profili oluşturuldu!`);
+    }
+    closeChildModal();
+    await loadChildren();
+  } catch(e) {
+    showChildModalError(e.message||'Bir hata oluştu');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Kaydet';
   }
-  closeChildModal();
-  renderChildrenList();
-  renderManualPtsSelect();
-  // Sidebar child listesini de güncelle
-  updateSidebarChildren();
+}
+
+function showChildModalError(msg) {
+  const el = document.getElementById('child-modal-error');
+  el.textContent = msg; el.style.display = 'block';
 }
 
 let deletingChildId = null;
 function openDeleteChildModal(id, name) {
   deletingChildId = id;
   document.getElementById('delete-child-msg').textContent =
-    `"${name}" profilini silmek istediğinize emin misiniz? Tüm görev geçmişi ve puanlar kalıcı silinir.`;
+    `"${name}" profilini silmek istediğinize emin misiniz? Tüm görev geçmişi, puanlar ve kayıtlar kalıcı olarak silinir.`;
   document.getElementById('delete-child-modal').classList.add('open');
 }
 
-function confirmDeleteChild() {
+async function confirmDeleteChild() {
   if (!deletingChildId) return;
+  const btn = document.getElementById('btn-confirm-delete');
+  btn.disabled = true; btn.textContent = 'Siliniyor...';
   const c = childrenData.find(x=>x.id===deletingChildId);
-  childrenData = childrenData.filter(x=>x.id!==deletingChildId);
-  document.getElementById('delete-child-modal').classList.remove('open');
-  showToast('🗑', `${c?.name||''} profili silindi`);
-  renderChildrenList();
-  renderManualPtsSelect();
-  updateSidebarChildren();
-  deletingChildId = null;
+  try {
+    await FamilyAPI.deleteChild(deletingChildId);
+    document.getElementById('delete-child-modal').classList.remove('open');
+    showToast('🗑', `${c?.name||''} profili silindi`);
+    deletingChildId = null;
+    await loadChildren();
+  } catch(e) {
+    showToast('❌', e.message||'Silme başarısız');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Evet, Kalıcı Sil';
+  }
 }
 
-function openResetModal(id, name) {
-  if (!confirm(`"${name}" için tüm puanlar sıfırlansın mı?`)) return;
-  const c = childrenData.find(x=>x.id===id);
-  if (c) { c.total_points = 0; }
-  showToast('🔄', `${name} puanları sıfırlandı`);
-  renderChildrenList();
-  updateSidebarChildren();
+async function openResetModal(id, name) {
+  if (!confirm(`"${name}" için tüm puanlar sıfırlansın mı? Bu işlem geri alınamaz.`)) return;
+  try {
+    await FamilyAPI.resetPoints(id);
+    showToast('🔄', `${name} puanları sıfırlandı`);
+    await loadChildren();
+  } catch(e) {
+    showToast('❌', e.message||'Sıfırlama başarısız');
+  }
 }
 
-function applyManualPoints() {
+async function applyManualPoints() {
   const childId = parseInt(document.getElementById('manual-child-id')?.value);
   const delta   = parseInt(document.getElementById('manual-delta').value) || 0;
   const reason  = document.getElementById('manual-reason').value.trim();
   if (!delta) { showToast('⚠️','Puan değeri girin'); return; }
   const c = childrenData.find(x=>x.id===childId);
   if (!c) return;
-  c.total_points = Math.max(0, c.total_points + delta);
-  document.getElementById('manual-delta').value  = '';
-  document.getElementById('manual-reason').value = '';
-  showToast(delta>0?'⭐':'📉', `${c.name}: ${delta>0?'+':''}${delta} puan (${reason||'manuel düzenleme'})`);
-  renderChildrenList();
-  updateSidebarChildren();
+
+  // point_ledger'a manuel kayıt ekle (completions endpoint yerine direkt ledger)
+  try {
+    await fetch('/api/family/children/'+childId+'/points', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+Auth.getToken() },
+      body: JSON.stringify({ delta, reason: reason||'Manuel düzenleme' })
+    }).then(r => { if(!r.ok) throw new Error(); });
+    showToast(delta>0?'⭐':'📉', `${c.name}: ${delta>0?'+':''}${delta} puan`);
+    document.getElementById('manual-delta').value  = '';
+    document.getElementById('manual-reason').value = '';
+    await loadChildren();
+  } catch(e) {
+    showToast('❌','Puan güncellenemedi');
+  }
 }
 
 function updateSidebarChildren() {
   const switcher = document.querySelector('.child-switcher');
   if (!switcher) return;
+  if (!childrenData.length) { switcher.innerHTML = ''; return; }
   switcher.innerHTML = childrenData.map((c,i) => `
-    <div class="child-card${i===0?' active':''}" onclick="selectChildById(${c.id})">
-      <div class="child-avatar">${c.avatar}</div>
+    <div class="child-card${i===0?' active':''}" onclick="selectChildById(${c.id},this)">
+      <div class="child-avatar">${c.avatar||'🦸'}</div>
       <div class="child-info">
-        <div class="ci-name">${c.name} (${AGE_GROUPS[c.age_group]})</div>
+        <div class="ci-name">${c.name}</div>
         <div class="ci-pts">⭐ ${c.total_points} puan</div>
       </div>
     </div>
   `).join('');
 }
 
-function selectChildById(id) {
+function selectChildById(id, el) {
   const c = childrenData.find(x=>x.id===id);
-  document.querySelectorAll('.child-card').forEach(el =>
-    el.classList.toggle('active', el.onclick?.toString().includes(id)));
+  document.querySelectorAll('.child-card').forEach(card => card.classList.remove('active'));
+  el?.classList.add('active');
   if (c) showToast('👶', `${c.name} seçildi`);
 }
 
 // ── PROFİL AYARLARI ──
-function renderProfilePage() {
+let currentUserData = null;
+let selectedParentAvatar = '👨';
+
+async function renderProfilePage() {
   const cont = document.getElementById('page-profile');
-  cont.innerHTML = `
-    <div style="max-width:580px">
-
-      <!-- Profil bilgileri -->
-      <div class="task-form-panel" style="margin-bottom:20px">
-        <div class="tfp-title">Hesap Bilgileri</div>
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--surface2);border-radius:var(--radius-sm)">
-          <div id="profile-avatar-display" style="font-size:40px;cursor:pointer;padding:8px;border-radius:12px;background:var(--purple-bg);transition:transform .15s" onclick="toggleAvatarPicker()" title="Avatar değiştir">👨</div>
-          <div>
-            <div id="profile-name-display" style="font-size:16px;font-weight:900">Ebeveyn</div>
-            <div id="profile-email-display" style="font-size:12px;color:var(--muted);font-weight:600">ebeveyn@demo.com</div>
-            <div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:2px">Avatar değiştirmek için tıkla ↑</div>
-          </div>
+  cont.innerHTML = `<div style="max-width:580px">
+    <div class="task-form-panel" style="margin-bottom:20px">
+      <div class="tfp-title">Hesap Bilgileri</div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--surface2);border-radius:var(--radius-sm)">
+        <div id="profile-avatar-display" style="font-size:40px;cursor:pointer;padding:8px;border-radius:12px;background:var(--purple-bg)" onclick="toggleAvatarPicker()" title="Avatar değiştir">⏳</div>
+        <div>
+          <div id="profile-name-display" style="font-size:16px;font-weight:900">Yükleniyor...</div>
+          <div id="profile-email-display" style="font-size:12px;color:var(--muted);font-weight:600"></div>
+          <div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:2px">Avatar değiştirmek için tıkla ↑</div>
         </div>
-
-        <!-- Avatar picker -->
-        <div id="avatar-picker-wrap" style="display:none;margin-bottom:16px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm)">
-          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Avatar Seç</div>
-          <div class="avatar-grid" id="parent-avatar-grid"></div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">İsim</label>
-          <input class="form-input" id="profile-name" placeholder="Adınız" value="Ebeveyn">
-        </div>
-        <div class="form-group">
-          <label class="form-label">E-posta</label>
-          <input class="form-input" id="profile-email" type="email" placeholder="email@ornek.com" value="ebeveyn@demo.com">
-        </div>
-        <button class="btn btn-primary" style="width:100%;padding:11px" onclick="saveProfile()">Bilgileri Kaydet</button>
       </div>
-
-      <!-- Şifre değiştir -->
-      <div class="task-form-panel" style="margin-bottom:20px">
-        <div class="tfp-title">Şifre Değiştir</div>
-        <div class="form-group">
-          <label class="form-label">Mevcut Şifre</label>
-          <input class="form-input" id="pw-current" type="password" placeholder="••••••••">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Yeni Şifre</label>
-          <input class="form-input" id="pw-new" type="password" placeholder="En az 6 karakter">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Yeni Şifre (Tekrar)</label>
-          <input class="form-input" id="pw-confirm" type="password" placeholder="Tekrar girin">
-        </div>
-        <div id="pw-error" style="display:none;font-size:12px;color:var(--coral);font-weight:700;margin-bottom:10px;padding:8px 12px;background:var(--coral-bg);border-radius:8px"></div>
-        <button class="btn btn-teal" style="width:100%;padding:11px" onclick="savePassword()">Şifreyi Güncelle</button>
+      <div id="avatar-picker-wrap" style="display:none;margin-bottom:16px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm)">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Avatar Seç</div>
+        <div class="avatar-grid" id="parent-avatar-grid"></div>
       </div>
-
-      <!-- Tehlikeli bölge -->
-      <div class="task-form-panel" style="border:1.5px solid var(--coral);background:var(--coral-bg)">
-        <div class="tfp-title" style="color:var(--coral)">⚠️ Tehlikeli Bölge</div>
-        <p style="font-size:12px;color:var(--coral);font-weight:600;margin-bottom:12px;line-height:1.6">
-          Oturumu kapatmak için aşağıdaki butonu kullanın. Tüm verileriniz sunucuda güvende kalır.
-        </p>
-        <button class="btn btn-coral" style="width:100%;padding:11px" onclick="logout()">🚪 Oturumu Kapat</button>
+      <div class="form-group">
+        <label class="form-label">İsim</label>
+        <input class="form-input" id="profile-name" placeholder="Adınız">
       </div>
+      <div class="form-group">
+        <label class="form-label">E-posta</label>
+        <input class="form-input" id="profile-email" type="email" placeholder="email@ornek.com">
+      </div>
+      <div id="profile-error" style="display:none;font-size:12px;color:var(--coral);padding:8px 12px;background:var(--coral-bg);border-radius:8px;margin-bottom:8px"></div>
+      <button class="btn btn-primary" style="width:100%;padding:11px" id="btn-save-profile" onclick="saveProfile()">Bilgileri Kaydet</button>
     </div>
-  `;
+    <div class="task-form-panel" style="margin-bottom:20px">
+      <div class="tfp-title">Şifre Değiştir</div>
+      <div class="form-group">
+        <label class="form-label">Mevcut Şifre</label>
+        <input class="form-input" id="pw-current" type="password" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Yeni Şifre</label>
+        <input class="form-input" id="pw-new" type="password" placeholder="En az 6 karakter">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Yeni Şifre (Tekrar)</label>
+        <input class="form-input" id="pw-confirm" type="password" placeholder="Tekrar girin">
+      </div>
+      <div id="pw-error" style="display:none;font-size:12px;color:var(--coral);padding:8px 12px;background:var(--coral-bg);border-radius:8px;margin-bottom:8px"></div>
+      <button class="btn btn-teal" style="width:100%;padding:11px" id="btn-save-pw" onclick="savePassword()">Şifreyi Güncelle</button>
+    </div>
+    <div class="task-form-panel" style="border:1.5px solid var(--coral);background:var(--coral-bg)">
+      <div class="tfp-title" style="color:var(--coral)">⚠️ Tehlikeli Bölge</div>
+      <p style="font-size:12px;color:var(--coral);font-weight:600;margin-bottom:12px;line-height:1.6">
+        Oturumu kapatmak için aşağıdaki butonu kullanın. Tüm verileriniz sunucuda güvende kalır.
+      </p>
+      <button class="btn btn-coral" style="width:100%;padding:11px" onclick="logout()">🚪 Oturumu Kapat</button>
+    </div>
+  </div>`;
 
-  // Parent avatar grid
+  // Avatar grid oluştur
   document.getElementById('parent-avatar-grid').innerHTML =
     ['👨','👩','👴','👵','🧑','👨‍💼','👩‍💼','🧑‍🏫','👨‍⚕️','👩‍⚕️','🦸','🌟'].map(a =>
       `<span class="avatar-opt" onclick="selectParentAvatar('${a}',this)">${a}</span>`
     ).join('');
-}
 
-let selectedParentAvatar = '👨';
+  // Güncel profil bilgilerini API'den çek
+  try {
+    currentUserData = await AuthAPI.me();
+    selectedParentAvatar = currentUserData.avatar || '👨';
+    document.getElementById('profile-avatar-display').textContent = selectedParentAvatar;
+    document.getElementById('profile-name-display').textContent   = currentUserData.name;
+    document.getElementById('profile-email-display').textContent  = currentUserData.email||'';
+    document.getElementById('profile-name').value  = currentUserData.name;
+    document.getElementById('profile-email').value = currentUserData.email||'';
+    // Avatar grid'de mevcut seçimi işaretle
+    document.querySelectorAll('#parent-avatar-grid .avatar-opt').forEach(el =>
+      el.classList.toggle('selected', el.textContent===selectedParentAvatar));
+  } catch(e) {
+    showToast('❌','Profil bilgileri yüklenemedi');
+  }
+}
 
 function toggleAvatarPicker() {
   const wrap = document.getElementById('avatar-picker-wrap');
-  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+  wrap.style.display = wrap.style.display==='none' ? 'block' : 'none';
 }
 
-function selectParentAvatar(avatar, el) {
+async function selectParentAvatar(avatar, el) {
   selectedParentAvatar = avatar;
   document.querySelectorAll('#parent-avatar-grid .avatar-opt').forEach(a => a.classList.remove('selected'));
   el.classList.add('selected');
   document.getElementById('profile-avatar-display').textContent = avatar;
   document.getElementById('avatar-picker-wrap').style.display = 'none';
-  showToast('✅','Avatar güncellendi');
+  try {
+    await FamilyAPI.updateAvatar(avatar);
+    // localStorage'daki user nesnesini güncelle
+    const u = Auth.getUser();
+    if (u) { u.avatar = avatar; Auth.setUser(u); }
+    showToast('✅','Avatar güncellendi');
+  } catch(e) {
+    showToast('❌','Avatar güncellenemedi');
+  }
 }
 
-function saveProfile() {
+async function saveProfile() {
   const name  = document.getElementById('profile-name').value.trim();
   const email = document.getElementById('profile-email').value.trim();
-  if (!name || !email) { showToast('⚠️','İsim ve email boş olamaz'); return; }
-  if (!email.includes('@')) { showToast('⚠️','Geçerli bir email girin'); return; }
-  document.getElementById('profile-name-display').textContent  = name;
-  document.getElementById('profile-email-display').textContent = email;
-  // API bağlantısında: FamilyAPI.updateProfile({ name, email })
-  showToast('✅','Profil bilgileri güncellendi');
+  const errEl = document.getElementById('profile-error');
+  errEl.style.display = 'none';
+
+  if (!name || !email) { errEl.textContent='İsim ve email boş olamaz'; errEl.style.display='block'; return; }
+  if (!email.includes('@')) { errEl.textContent='Geçerli bir email girin'; errEl.style.display='block'; return; }
+
+  const btn = document.getElementById('btn-save-profile');
+  btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+  try {
+    const updated = await FamilyAPI.updateProfile({ name, email });
+    // localStorage güncelle
+    const u = Auth.getUser();
+    if (u) { u.name = updated.name; Auth.setUser(u); }
+    document.getElementById('profile-name-display').textContent  = updated.name;
+    document.getElementById('profile-email-display').textContent = updated.email;
+    showToast('✅','Profil bilgileri güncellendi');
+  } catch(e) {
+    errEl.textContent = e.message||'Güncelleme başarısız'; errEl.style.display='block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Bilgileri Kaydet';
+  }
 }
 
-function savePassword() {
+async function savePassword() {
   const current = document.getElementById('pw-current').value;
   const newPw   = document.getElementById('pw-new').value;
   const confirm = document.getElementById('pw-confirm').value;
   const errEl   = document.getElementById('pw-error');
   errEl.style.display = 'none';
 
-  if (!current || !newPw || !confirm) { showPwError('Tüm alanları doldurun'); return; }
-  if (newPw.length < 6) { showPwError('Yeni şifre en az 6 karakter olmalı'); return; }
-  if (newPw !== confirm) { showPwError('Yeni şifreler eşleşmiyor'); return; }
+  if (!current||!newPw||!confirm) { showPwError('Tüm alanları doldurun'); return; }
+  if (newPw.length < 6)           { showPwError('Yeni şifre en az 6 karakter olmalı'); return; }
+  if (newPw !== confirm)          { showPwError('Yeni şifreler eşleşmiyor'); return; }
 
-  // API bağlantısında: FamilyAPI.updatePassword({ current_password: current, new_password: newPw })
-  document.getElementById('pw-current').value = '';
-  document.getElementById('pw-new').value     = '';
-  document.getElementById('pw-confirm').value = '';
-  showToast('🔐','Şifre başarıyla güncellendi');
+  const btn = document.getElementById('btn-save-pw');
+  btn.disabled = true; btn.textContent = 'Güncelleniyor...';
+  try {
+    await FamilyAPI.updatePassword({ current_password: current, new_password: newPw });
+    document.getElementById('pw-current').value = '';
+    document.getElementById('pw-new').value     = '';
+    document.getElementById('pw-confirm').value = '';
+    showToast('🔐','Şifre başarıyla güncellendi');
+  } catch(e) {
+    showPwError(e.message||'Mevcut şifre hatalı olabilir');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Şifreyi Güncelle';
+  }
 }
 
 function showPwError(msg) {
   const el = document.getElementById('pw-error');
-  el.textContent = msg;
-  el.style.display = 'block';
+  el.textContent = msg; el.style.display = 'block';
 }
 
 // ── INIT ──
+// Çocuk listesini başlangıçta da yükle (sidebar için)
+(async () => {
+  try {
+    childrenData = await FamilyAPI.listChildren();
+    updateSidebarChildren();
+  } catch(e) {}
+})();
+
 showPage('dashboard');
 </script>
 </body>
