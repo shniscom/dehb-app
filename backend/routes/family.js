@@ -137,6 +137,30 @@ router.delete('/children/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/family/children/:id/points  — manuel puan ekle/çıkar
+router.post('/children/:id/points', (req, res) => {
+  const { delta, reason } = req.body;
+  if (!delta || isNaN(delta)) return res.status(400).json({ error: 'Geçerli bir puan değeri girin' });
+
+  const child = db.prepare(
+    "SELECT * FROM users WHERE id=? AND family_id=? AND role='child'"
+  ).get(req.params.id, req.user.family_id);
+  if (!child) return res.status(404).json({ error: 'Çocuk bulunamadı' });
+
+  const { calcTotal } = require('../utils/points');
+  db.transaction(() => {
+    db.prepare(`
+      INSERT INTO point_ledger (child_id, delta, reason, source_type)
+      VALUES (?, ?, ?, 'manual')
+    `).run(req.params.id, parseInt(delta), reason || 'Manuel düzenleme');
+
+    const total = calcTotal(db, req.params.id);
+    db.prepare('UPDATE users SET total_points=? WHERE id=?').run(total, req.params.id);
+  })();
+
+  res.json({ ok: true, new_total: calcTotal(db, req.params.id) });
+});
+
 // POST /api/family/children/:id/reset-points  — puanları sıfırla
 router.post('/children/:id/reset-points', (req, res) => {
   const child = db.prepare(
