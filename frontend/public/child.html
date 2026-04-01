@@ -878,89 +878,168 @@ body.young .reward-card { width: 140px; }
     <span class="nav-icon">🏆</span>
     <span class="nav-label">Ödüller</span>
   </div>
-  <div class="nav-item">
-    <span class="nav-icon">📊</span>
-    <span class="nav-label">Gelişim</span>
+  <div class="nav-item" onclick="logout()">
+    <span class="nav-icon">🚪</span>
+    <span class="nav-label" style="color:var(--coral)">Çıkış</span>
   </div>
 </div>
 
 <script>
-// ── DATA ──
-let totalPoints = 145;
-let currentTask = null;
-let timerInterval = null;
-let timerRunning = false;
-let timerSeconds = 0;
-let timerTotal = 0;
+// ── STATE — API'den gelir, hardcoded değil ──
+let currentUser  = null;
+let totalPoints  = 0;
+let tasks        = [];   // DB'den gelen görevler
+let rewardsList  = [];   // DB'den gelen ödüller
+let currentTask  = null;
+let timerInterval  = null;
+let timerRunning   = false;
+let timerSeconds   = 0;
+let timerTotal     = 0;
 let selectedQuality = null;
-let ageMode = 'young';
+let ageMode        = 'young';
+let streakCount    = 0;
 
-const COLORS = ['teal','amber','coral','blue','purple','green'];
-
-const tasks = [
-  { id:1, title:'Diş Fırçalama', sub:'Sabah rutini', icon:'🦷', cat:'rutin', color:'teal',
-    pts:10, bonusGreat:5, bonusGood:3, penaltyLate:-3, penaltySkip:-5, duration:5,
-    subtasks:['Fırçayı ıslatmak','2 dk fırçalamak','Ağzı çalkalamak'], done:false, pending:false },
-  { id:2, title:'Oda Toplama', sub:'Günlük ev görevi', icon:'🧹', cat:'ev', color:'amber',
-    pts:10, bonusGreat:10, bonusGood:5, penaltyLate:-5, penaltySkip:-10, duration:15,
-    subtasks:['Yatağı düzelt','Oyuncakları topla','Elbiseleri yerleştir','Masayı sil'], done:false, pending:false },
-  { id:3, title:'Matematik Ödevi', sub:'Okul görevi', icon:'📐', cat:'okul', color:'blue',
-    pts:15, bonusGreat:10, bonusGood:5, penaltyLate:-5, penaltySkip:-15, duration:20,
-    subtasks:['Kitabı aç','Soruları çöz','Kontrol et'], done:true, pending:false },
-  { id:4, title:'30 Dk Egzersiz', sub:'Hareket vakti', icon:'⚽', cat:'hareket', color:'coral',
-    pts:12, bonusGreat:8, bonusGood:4, penaltyLate:-4, penaltySkip:-10, duration:30,
-    subtasks:['Isınma hareketleri','Ana egzersiz','Soğuma'], done:false, pending:false },
-];
-
-const rewards = [
-  { name:'Ekstra Oyun', icon:'🎮', pts:50, color:'purple' },
-  { name:'Dondurma', icon:'🍦', pts:80, color:'teal' },
-  { name:'Film Gecesi', icon:'🎬', pts:120, color:'coral' },
-  { name:'Park Gezisi', icon:'🎡', pts:200, color:'amber' },
-  { name:'Oyuncak', icon:'🧸', pts:350, color:'blue' },
-];
+const CAT_COLORS = {rutin:'teal',ev:'amber',okul:'blue',hareket:'coral',sosyal:'purple',bakim:'green'};
 
 // ── INIT ──
-function init() {
+async function init() {
   renderStars();
-  renderStreakDots();
-  renderTasks();
-  renderRewards();
-  updateProgress();
+
+  // Token kontrolü
+  if (!Auth.isLoggedIn()) { window.location.href='/login.html'; return; }
+
+  currentUser = Auth.getUser();
+  if (!currentUser || currentUser.role !== 'child') {
+    window.location.href = '/login.html'; return;
+  }
+
+  // Yaş modunu ayarla
+  ageMode = currentUser.age_group || 'young';
+  document.body.className = ageMode;
+
+  // Avatar ve isim
+  document.getElementById('avatar-emoji').textContent = currentUser.avatar || '🦸';
+  document.getElementById('greet-name').textContent   = `Merhaba, ${currentUser.name}! 👋`;
+
+  // Güncel profil ve puan API'den
+  try {
+    const me = await AuthAPI.me();
+    totalPoints = me.total_points || 0;
+    currentUser = { ...currentUser, ...me };
+    Auth.setUser(currentUser);
+  } catch(e) {}
+
+  updatePointsDisplay();
+  await loadTasks();
+  await loadRewards();
+  await loadStreak();
 }
 
+// ── LOGOUT ──
+function logout() {
+  Auth.clear();
+  window.location.href = '/login.html';
+}
+
+// ── GÖREVLER ──
+async function loadTasks() {
+  try {
+    const raw = await TasksAPI.today(currentUser.id);
+    // API formatını yerel formata çevir
+    tasks = raw.map(t => ({
+      id:          t.id,
+      title:       t.title,
+      sub:         catLabel(t.category) + ' · ' + recurLabel(t.recurrence),
+      icon:        t.icon || '📋',
+      cat:         t.category,
+      color:       CAT_COLORS[t.category] || 'purple',
+      pts:         t.pts_base,
+      bonusGreat:  t.pts_great,
+      bonusGood:   t.pts_good,
+      penaltyLate: t.pts_late,
+      penaltySkip: t.pts_skip,
+      duration:    t.duration_min,
+      subtasks:    Array.isArray(t.subtasks) ? t.subtasks : JSON.parse(t.subtasks||'[]'),
+      done:        t.completion?.status === 'approved',
+      pending:     t.completion?.status === 'pending',
+      comp_id:     t.completion?.id || null,
+    }));
+  } catch(e) {
+    tasks = [];
+  }
+  renderTasks();
+  updateProgress();
+  const remaining = tasks.filter(t=>!t.done&&!t.pending).length;
+  document.getElementById('greet-sub').textContent =
+    remaining > 0 ? `Bugün ${remaining} görevin var` : 'Harika! Tüm görevler tamam 🎉';
+}
+
+async function loadRewards() {
+  try {
+    rewardsList = await RewardsAPI.list();
+  } catch(e) { rewardsList = []; }
+  renderRewards();
+}
+
+async function loadStreak() {
+  try {
+    const s = await ReportsAPI.streak(currentUser.id);
+    streakCount = s.current_streak || 0;
+    renderStreakBar(s.streak || []);
+  } catch(e) {
+    renderStreakBar([]);
+  }
+}
+
+// ── RENDER ──
 function renderStars() {
   const c = document.getElementById('stars');
   for (let i=0; i<40; i++) {
     const s = document.createElement('div');
     s.className = 'star';
     const size = Math.random()*3+1;
-    s.style.cssText = `
-      left:${Math.random()*100}%;top:${Math.random()*100}%;
-      width:${size}px;height:${size}px;
-      --d:${2+Math.random()*4}s;--delay:${Math.random()*5}s;
-      --op:${0.3+Math.random()*0.7};
-    `;
+    s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;width:${size}px;height:${size}px;--d:${2+Math.random()*4}s;--delay:${Math.random()*5}s;--op:${0.3+Math.random()*0.7}`;
     c.appendChild(s);
   }
 }
 
-function renderStreakDots() {
-  const days = ['P','S','Ç','P','C','C','P'];
-  const doneCount = 4;
-  const c = document.getElementById('streak-dots');
-  c.innerHTML = days.map((d,i) => `<div class="streak-dot${i<doneCount?' done':''}"></div>`).join('');
+function renderStreakBar(streakData) {
+  const dots  = document.getElementById('streak-dots');
+  const label = document.querySelector('.streak-text strong');
+  const sub   = document.querySelector('.streak-text span');
+
+  // Son 7 günü al
+  const last7 = streakData.slice(0,7).reverse();
+  dots.innerHTML = last7.map(s =>
+    `<div class="streak-dot${s.type==='full'?' done':''}"></div>`
+  ).join('') || Array(7).fill('<div class="streak-dot"></div>').join('');
+
+  if (streakCount > 0) {
+    label.textContent = `${streakCount} Günlük Seri!`;
+    sub.textContent   = 'Devam et!';
+  } else {
+    label.textContent = 'Seri Başlat!';
+    sub.textContent   = 'Bugün ilk görevi tamamla';
+  }
 }
 
 function renderTasks(cat='all') {
   const list = document.getElementById('tasks-list');
   list.innerHTML = '';
   const filtered = cat==='all' ? tasks : tasks.filter(t=>t.cat===cat);
+
+  if (!filtered.length) {
+    list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-weight:700">
+      ${cat==='all' ? 'Bugün için görev yok 🎉' : 'Bu kategoride görev yok'}
+    </div>`;
+    return;
+  }
+
   filtered.forEach(t => {
     const div = document.createElement('div');
-    div.className = `task-card${t.done?' done':''}${t.pending?' done':''}`;
+    div.className = `task-card${(t.done||t.pending)?' done':''}`;
     div.dataset.color = t.color;
-    div.onclick = () => openTask(t);
+    div.onclick = () => !t.done && openTask(t);
     div.innerHTML = `
       <div class="task-header">
         <div class="task-icon">${t.icon}</div>
@@ -968,7 +1047,7 @@ function renderTasks(cat='all') {
           <h3>${t.title}</h3>
           <div class="task-sub">${t.sub}</div>
         </div>
-        <div class="task-check">${t.done||t.pending ? '✓' : ''}</div>
+        <div class="task-check">${t.done ? '✓' : t.pending ? '⏳' : ''}</div>
       </div>
       <div class="task-footer">
         <span class="task-tag">${catLabel(t.cat)}</span>
@@ -977,31 +1056,33 @@ function renderTasks(cat='all') {
       </div>
     `;
     if (t.pending) {
-      div.querySelector('.task-check').textContent = '⏳';
-      div.querySelector('.task-check').style.background = 'rgba(255,179,71,0.2)';
+      const check = div.querySelector('.task-check');
+      check.style.background = 'rgba(255,179,71,0.2)';
+      check.style.borderColor = 'var(--amber)';
     }
     list.appendChild(div);
   });
 }
 
-function catLabel(c) {
-  return {rutin:'🌅 Rutin',ev:'🏠 Ev',okul:'📚 Okul',hareket:'⚽ Hareket'}[c]||c;
-}
-
 function renderRewards() {
   const list = document.getElementById('rewards-list');
   list.innerHTML = '';
-  rewards.forEach(r => {
-    const unlocked = totalPoints >= r.pts;
-    const pct = Math.min(100, (totalPoints/r.pts)*100);
-    const div = document.createElement('div');
-    div.className = `reward-card ${unlocked?'unlocked':'locked'}`;
-    div.innerHTML = `
+  if (!rewardsList.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--muted);font-weight:700;padding:10px">Henüz ödül eklenmemiş</div>';
+    return;
+  }
+  rewardsList.forEach(r => {
+    const req      = r.pts_required || r.pts || 999;
+    const unlocked = totalPoints >= req;
+    const pct      = Math.min(100, Math.round((totalPoints/req)*100));
+    const div      = document.createElement('div');
+    div.className  = `reward-card ${unlocked?'unlocked':'locked'}`;
+    div.innerHTML  = `
       ${!unlocked?'<span class="reward-lock">🔒</span>':''}
-      <span class="r-icon">${r.icon}</span>
-      <div class="r-name">${r.name}</div>
+      <span class="r-icon">${r.icon||'🎁'}</span>
+      <div class="r-name">${r.title||r.name}</div>
       <div class="reward-progress-bar"><div class="reward-fill" style="width:${pct}%"></div></div>
-      <div class="reward-pts">${unlocked?'✅ Hazır!':totalPoints+' / '+r.pts+' ⭐'}</div>
+      <div class="reward-pts">${unlocked?'✅ Hazır!':totalPoints+' / '+req+' ⭐'}</div>
     `;
     if (unlocked) div.onclick = () => claimReward(r);
     list.appendChild(div);
@@ -1009,34 +1090,40 @@ function renderRewards() {
 }
 
 function updateProgress() {
-  const done = tasks.filter(t=>t.done||t.pending).length;
+  const done  = tasks.filter(t=>t.done||t.pending).length;
   const total = tasks.length;
   document.getElementById('progress-label').textContent = `${done} / ${total} tamamlandı`;
-  document.getElementById('progress-fill').style.width = `${(done/total)*100}%`;
-  document.getElementById('greet-sub').textContent = `Bugün ${total-done} görevin var`;
+  document.getElementById('progress-fill').style.width  = total > 0 ? `${Math.round((done/total)*100)}%` : '0%';
 }
 
-// ── TASK MODAL ──
+function updatePointsDisplay() {
+  const el = document.getElementById('total-pts');
+  el.style.transform = 'scale(1.4)';
+  el.textContent = totalPoints;
+  setTimeout(()=>el.style.transform='scale(1)', 300);
+}
+
+// ── GÖREV DETAY ──
 function openTask(t) {
   if (t.done) return;
   currentTask = t;
   stopTimer();
-  document.getElementById('m-icon').textContent = t.icon;
+  document.getElementById('m-icon').textContent  = t.icon;
   document.getElementById('m-title').textContent = t.title;
-  document.getElementById('m-sub').textContent = t.sub;
-  document.getElementById('m-pts').textContent = t.pts;
+  document.getElementById('m-sub').textContent   = t.sub;
+  document.getElementById('m-pts').textContent   = t.pts;
   document.getElementById('m-bonus').textContent = '+'+t.bonusGreat;
-  document.getElementById('m-time').textContent = t.duration+'dk';
-  timerTotal = t.duration * 60;
+  document.getElementById('m-time').textContent  = t.duration+'dk';
+  timerTotal   = t.duration * 60;
   timerSeconds = timerTotal;
   updateTimerDisplay();
   updateTimerRing(1);
   document.getElementById('timer-label').textContent = 'Hazır';
-  document.getElementById('btn-start').textContent = '▶  Başla';
-  document.getElementById('btn-start').className = 'btn-start';
-  // subtasks
+  document.getElementById('btn-start').textContent   = '▶  Başla';
+  document.getElementById('btn-start').className     = 'btn-start';
+  // Subtask'lar
   const sub = document.getElementById('m-subtasks');
-  sub.innerHTML = t.subtasks.map((s,i)=>`
+  sub.innerHTML = (t.subtasks||[]).map((s,i)=>`
     <div class="subtask-item" id="sub-${t.id}-${i}" onclick="toggleSubtask(${t.id},${i})">
       <div class="subtask-check"></div>
       <span class="subtask-text">${s}</span>
@@ -1052,22 +1139,21 @@ function toggleSubtask(tid, idx) {
   check.textContent = el.classList.contains('done') ? '✓' : '';
 }
 
-// ── TIMER ──
+// ── ZAMANLAYICI ──
 function toggleTimer() {
   if (!timerRunning) {
     startTimer();
   } else {
-    // "Bitti!" tıklandı
     stopTimer();
     closeModal('task-modal');
-    setTimeout(()=>openQuality(),200);
+    setTimeout(()=>openQuality(), 200);
   }
 }
 
 function startTimer() {
   timerRunning = true;
   document.getElementById('btn-start').textContent = '🏁  Bitti!';
-  document.getElementById('btn-start').className = 'btn-start running';
+  document.getElementById('btn-start').className   = 'btn-start running';
   document.getElementById('timer-label').textContent = 'Sayıyor...';
   timerInterval = setInterval(()=>{
     timerSeconds--;
@@ -1075,8 +1161,8 @@ function startTimer() {
       timerSeconds = 0;
       stopTimer();
       document.getElementById('timer-label').textContent = 'Süre doldu!';
-      document.getElementById('btn-start').textContent = '⏰  Geç Bitti!';
-      document.getElementById('btn-start').className = 'btn-start';
+      document.getElementById('btn-start').textContent   = '⏰  Geç Bitti!';
+      document.getElementById('btn-start').className     = 'btn-start';
     }
     updateTimerDisplay();
     updateTimerRing(timerSeconds/timerTotal);
@@ -1097,21 +1183,18 @@ function updateTimerDisplay() {
 
 function updateTimerRing(pct) {
   const circ = 327;
-  const offset = circ * (1-pct);
   const c = document.getElementById('timer-circle');
-  c.style.strokeDashoffset = offset;
-  c.style.stroke = pct > 0.5 ? 'url(#tg)' :
-                   pct > 0.25 ? 'var(--amber)' : 'var(--coral)';
+  c.style.strokeDashoffset = circ*(1-pct);
+  c.style.stroke = pct>0.5?'url(#tg)':pct>0.25?'var(--amber)':'var(--coral)';
 }
 
-// ── QUALITY MODAL ──
+// ── KALİTE SEÇİMİ ──
 function openQuality() {
   selectedQuality = null;
   document.querySelectorAll('.quality-btn').forEach(b=>b.classList.remove('selected'));
-  document.getElementById('btn-confirm').disabled = true;
-  document.getElementById('btn-confirm').style.opacity = '.4';
-  // set point labels
-  const t = currentTask;
+  const btn = document.getElementById('btn-confirm');
+  btn.disabled = true; btn.style.opacity='.4';
+  const t    = currentTask;
   const late = timerSeconds === 0;
   document.getElementById('qpts-great').textContent = `+${t.pts+t.bonusGreat} ⭐`;
   document.getElementById('qpts-good').textContent  = `+${t.pts+t.bonusGood} ⭐`;
@@ -1124,205 +1207,119 @@ function selectQuality(q) {
   selectedQuality = q;
   document.querySelectorAll('.quality-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('q-'+q).classList.add('selected');
-  document.getElementById('btn-confirm').disabled = false;
-  document.getElementById('btn-confirm').style.opacity = '1';
+  const btn = document.getElementById('btn-confirm');
+  btn.disabled = false; btn.style.opacity='1';
 }
 
-function confirmCompletion() {
+async function confirmCompletion() {
   if (!selectedQuality || !currentTask) return;
   const t = currentTask;
+
+  // Lokal puan tahmini (gösterim için)
   let earned = t.pts;
   if (selectedQuality==='great') earned += t.bonusGreat;
   if (selectedQuality==='good')  earned += t.bonusGood;
   if (selectedQuality==='late')  earned = Math.max(0, t.pts+t.penaltyLate);
-  t.pending = true;
-  totalPoints += earned;
+
   closeModal('quality-modal');
-  setTimeout(()=>{
+
+  // API'ye gönder
+  try {
+    await CompletionsAPI.complete({
+      task_id:  t.id,
+      quality:  selectedQuality,
+      was_late: timerSeconds === 0,
+    });
+    // Görevi pending yap
+    t.pending = true;
+    totalPoints += earned;
+
+    // Gerçek puanı çek
+    const me = await AuthAPI.me();
+    totalPoints = me.total_points || totalPoints;
+    Auth.setUser({...currentUser, total_points: totalPoints});
+
     renderTasks();
-    renderRewards();
     updateProgress();
+    await loadRewards();
+    await loadStreak();
     animatePoints(earned);
     launchConfetti();
     updatePointsDisplay();
-    // add to pending list for parent
-    addPendingApproval(t, selectedQuality, earned);
-  }, 200);
+  } catch(e) {
+    // Aynı görev bugün zaten tamamlandıysa
+    alert(e.message || 'Görev gönderilemedi');
+  }
 }
 
+// ── ÖDÜL TALEBİ ──
+async function claimReward(r) {
+  if (totalPoints < (r.pts_required||r.pts)) return;
+  try {
+    await RewardsAPI.claim(r.id);
+    launchConfetti();
+    alert(`"${r.title||r.name}" ödülü ebeveynine iletildi! 🎉`);
+    await loadRewards();
+  } catch(e) {
+    alert(e.message || 'Ödül talep edilemedi');
+  }
+}
+
+// ── ANİMASYON ──
 function animatePoints(pts) {
   const el = document.createElement('div');
   el.className = 'float-pts';
   el.textContent = '+'+pts+' ⭐';
   const badge = document.querySelector('.points-badge');
-  const rect = badge.getBoundingClientRect();
-  el.style.left = rect.left + 'px';
-  el.style.top  = rect.top + 'px';
+  const rect  = badge.getBoundingClientRect();
+  el.style.left = rect.left+'px';
+  el.style.top  = rect.top+'px';
   document.body.appendChild(el);
   setTimeout(()=>el.remove(), 900);
-}
-
-function updatePointsDisplay() {
-  const el = document.getElementById('total-pts');
-  el.style.transform = 'scale(1.4)';
-  el.textContent = totalPoints;
-  setTimeout(()=>el.style.transform='scale(1)',300);
 }
 
 function launchConfetti() {
   const colors = ['#a87fff','#3ecfb2','#ffb347','#ff6b6b','#4ade80','#60a5fa'];
   const c = document.getElementById('confetti');
-  for(let i=0; i<60; i++) {
+  for(let i=0;i<60;i++){
     const p = document.createElement('div');
-    p.className = 'confetti-piece';
-    p.style.cssText = `
-      left:${20+Math.random()*60}%;
-      background:${colors[Math.floor(Math.random()*colors.length)]};
-      width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;
-      border-radius:${Math.random()>0.5?'50%':'2px'};
-      --d:${0.8+Math.random()*1.2}s;
-      animation-delay:${Math.random()*0.4}s;
-    `;
+    p.className='confetti-piece';
+    p.style.cssText=`left:${20+Math.random()*60}%;background:${colors[Math.floor(Math.random()*colors.length)]};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;border-radius:${Math.random()>.5?'50%':'2px'};--d:${0.8+Math.random()*1.2}s;animation-delay:${Math.random()*.4}s`;
     c.appendChild(p);
     setTimeout(()=>p.remove(), 2000);
   }
 }
 
-// ── PARENT PANEL ──
-let pendingApprovals = [];
-
-function addPendingApproval(task, quality, pts) {
-  pendingApprovals.push({task, quality, pts, id: Date.now()});
-}
-
-function openParent() {
-  renderPendingList();
-  openModal('parent-modal');
-}
-
-function renderPendingList() {
-  const list = document.getElementById('pending-list');
-  if (pendingApprovals.length === 0) {
-    list.innerHTML = '<p style="font-size:12px;color:var(--muted);text-align:center;padding:12px">Bekleyen onay yok 🎉</p>';
-    return;
-  }
-  list.innerHTML = pendingApprovals.map(p=>`
-    <div class="parent-task-row" id="pr-${p.id}">
-      <span class="ptr-icon">${p.task.icon}</span>
-      <div class="ptr-info">
-        <h4>${p.task.title}</h4>
-        <p>${qualityLabel(p.quality)} · +${p.pts} ⭐ öneriyor</p>
-      </div>
-      <div class="ptr-actions">
-        <button class="ptr-btn approve" onclick="approveTask(${p.id})">✓</button>
-        <button class="ptr-btn reject"  onclick="rejectTask(${p.id})">✕</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function qualityLabel(q) {
-  return {great:'🌟 Çok iyi',good:'😊 İyi',ok:'🙂 Tamamladı',late:'⏰ Geç'}[q]||q;
-}
-
-function approveTask(id) {
-  const p = pendingApprovals.find(x=>x.id===id);
-  if (!p) return;
-  p.task.done = true; p.task.pending = false;
-  pendingApprovals = pendingApprovals.filter(x=>x.id!==id);
-  closeModal('parent-modal');
-  setTimeout(()=>{
-    renderTasks(); updateProgress(); renderRewards();
-  },200);
-}
-
-function rejectTask(id) {
-  const p = pendingApprovals.find(x=>x.id===id);
-  if (!p) return;
-  // geri al
-  totalPoints = Math.max(0, totalPoints - p.pts);
-  p.task.pending = false;
-  pendingApprovals = pendingApprovals.filter(x=>x.id!==id);
-  updatePointsDisplay();
-  closeModal('parent-modal');
-  setTimeout(()=>{ renderTasks(); updateProgress(); renderRewards(); },200);
-}
-
-function addNewTask() {
-  const name = document.getElementById('new-task-name').value.trim();
-  if (!name) return;
-  const pts = parseInt(document.getElementById('new-task-pts').value)||10;
-  const dur = parseInt(document.getElementById('new-task-time').value)||10;
-  const cat = document.getElementById('new-task-cat').value;
-  const icons = {rutin:'☀️', ev:'🏠', okul:'📚', hareket:'⚽'};
-  const colors = {rutin:'teal', ev:'amber', okul:'blue', hareket:'coral'};
-  tasks.push({
-    id: Date.now(), title:name,
-    sub: catLabel(cat)+' · Ebeveyn ekledi',
-    icon: icons[cat]||'📋', cat, color: colors[cat]||'purple',
-    pts, bonusGreat:Math.round(pts*0.5), bonusGood:Math.round(pts*0.3),
-    penaltyLate:-Math.round(pts*0.3), penaltySkip:-pts,
-    duration: dur, subtasks:[], done:false, pending:false
-  });
-  document.getElementById('new-task-name').value='';
-  closeModal('parent-modal');
-  setTimeout(()=>{ renderTasks(); updateProgress(); },200);
-}
-
-function adjustPoints() {
-  const delta = parseInt(document.getElementById('adj-pts').value)||0;
-  if (!delta) return;
-  totalPoints = Math.max(0, totalPoints+delta);
-  updatePointsDisplay();
-  renderRewards();
-  if (delta>0) launchConfetti();
-  document.getElementById('adj-pts').value='';
-  document.getElementById('adj-note').value='';
-  closeModal('parent-modal');
-}
-
-// ── REWARD CLAIM ──
-function claimReward(r) {
-  if (totalPoints < r.pts) return;
-  totalPoints -= r.pts;
-  updatePointsDisplay();
-  renderRewards();
-  launchConfetti();
-}
-
-// ── FILTER ──
+// ── FİLTRE & YARDIMCI ──
 function filterCat(el, cat) {
   document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
   renderTasks(cat);
 }
 
-// ── AGE MODE ──
+function catLabel(c) {
+  return {rutin:'🌅 Rutin',ev:'🏠 Ev',okul:'📚 Okul',hareket:'⚽ Hareket',sosyal:'🤝 Sosyal',bakim:'🪥 Bakım'}[c]||c;
+}
+function recurLabel(r) {
+  return {daily:'Her gün',weekdays:'Hafta içi',weekly:'Haftalık',custom:'Özel'}[r]||r;
+}
+
 function setAge(mode) {
   ageMode = mode;
   document.body.className = mode;
   document.querySelectorAll('.mode-btn').forEach((b,i)=>{
     b.classList.toggle('active', (i===0&&mode==='young')||(i===1&&mode==='teen'));
   });
-  const greet = document.getElementById('greet-name');
-  if (mode==='teen') {
-    greet.textContent = 'Merhaba, Ali 👋';
-    document.getElementById('greet-sub').style.fontSize='12px';
-  } else {
-    greet.textContent = 'Merhaba, Ali! 👋';
-  }
 }
 
-// ── MODAL HELPERS ──
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
-}
+// ── MODAL ──
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
-  if (id==='task-modal') stopTimer();
+  if(id==='task-modal') stopTimer();
 }
 
-// ── START ──
+// ── BAŞLAT ──
 init();
 </script>
 </body>
