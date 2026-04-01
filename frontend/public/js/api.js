@@ -83,6 +83,7 @@ const RewardsAPI = {
   update:       (id, data)  => put(`/rewards/${id}`, data),
   remove:       (id)        => del(`/rewards/${id}`),
   claim:        (id)        => post(`/rewards/${id}/claim`),
+  give:         (id, childId) => post(`/rewards/${id}/give/${childId}`),
   pendingClaims:()          => get('/rewards/claims/pending'),
   approveClaim: (id)        => patch(`/rewards/claims/${id}/approve`),
   rejectClaim:  (id)        => patch(`/rewards/claims/${id}/reject`),
