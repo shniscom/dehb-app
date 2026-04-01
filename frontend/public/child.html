@@ -803,7 +803,8 @@ body.young .reward-card { width: 140px; }
   <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:70vh">
     <div class="modal-handle"></div>
     <div class="modal-title" style="margin-bottom:6px">Nasıl yaptın? 🤔</div>
-    <div class="modal-sub" style="margin-bottom:16px">Ebeveynin onaylayacak — dürüst ol!</div>
+    <div class="modal-sub" style="margin-bottom:8px">Ebeveynin onaylayacak — dürüst ol!</div>
+    <div id="quality-subtask-info" style="display:none;text-align:center;font-size:12px;font-weight:800;color:var(--teal);background:rgba(62,207,178,0.1);border-radius:8px;padding:6px;margin-bottom:12px"></div>
     <div class="quality-row">
       <div class="quality-btn" onclick="selectQuality('great')" id="q-great">
         <span class="qb-emoji">🌟</span>
@@ -1210,17 +1211,45 @@ function updateTimerRing(pct) {
 }
 
 // ── KALİTE SEÇİMİ ──
+function calcSubtaskEarnedClient(totalPts, allSubtasks, doneSubtasks) {
+  if (!allSubtasks || allSubtasks.length === 0) return totalPts;
+  const count = allSubtasks.length;
+  const base  = Math.floor(totalPts / count);
+  const rem   = totalPts - base * count;
+  const pts   = allSubtasks.map((_, i) => i === count-1 ? base+rem : base);
+  return allSubtasks.reduce((sum, s, i) => doneSubtasks.includes(s) ? sum + pts[i] : sum, 0);
+}
+
 function openQuality() {
   selectedQuality = null;
   document.querySelectorAll('.quality-btn').forEach(b=>b.classList.remove('selected'));
   const btn = document.getElementById('btn-confirm');
   btn.disabled = true; btn.style.opacity='.4';
-  const t    = currentTask;
-  const late = timerSeconds === 0;
-  document.getElementById('qpts-great').textContent = `+${t.pts+t.bonusGreat} ⭐`;
-  document.getElementById('qpts-good').textContent  = `+${t.pts+t.bonusGood} ⭐`;
-  document.getElementById('qpts-ok').textContent    = `+${t.pts} ⭐`;
-  document.getElementById('qpts-late').textContent  = `+${Math.max(0,t.pts+t.penaltyLate)} ⭐`;
+  const t = currentTask;
+
+  // Tamamlanan alt görevler
+  const doneSubtasks = Array.from(document.querySelectorAll(`[id^="sub-${t.id}-"].done`))
+    .map(el => { const idx=parseInt(el.id.split('-').pop()); return t.subtasks[idx]||''; })
+    .filter(Boolean);
+
+  // Alt görev bazlı base puan
+  const basePts = calcSubtaskEarnedClient(t.pts, t.subtasks||[], doneSubtasks);
+  const ratio   = t.subtasks&&t.subtasks.length>0 ? doneSubtasks.length/t.subtasks.length : 1;
+
+  document.getElementById('qpts-great').textContent = `+${Math.max(0, basePts + Math.round((t.bonusGreat||0)*ratio))} ⭐`;
+  document.getElementById('qpts-good').textContent  = `+${Math.max(0, basePts + Math.round((t.bonusGood||0)*ratio))} ⭐`;
+  document.getElementById('qpts-ok').textContent    = `+${basePts} ⭐`;
+  document.getElementById('qpts-late').textContent  = `+${Math.max(0, basePts + Math.round((t.penaltyLate||0)*ratio))} ⭐`;
+
+  // Tamamlanma oranı bilgisi
+  if (t.subtasks && t.subtasks.length > 0) {
+    document.getElementById('quality-subtask-info').textContent =
+      `${doneSubtasks.length}/${t.subtasks.length} alt görev tamamlandı`;
+    document.getElementById('quality-subtask-info').style.display = 'block';
+  } else {
+    document.getElementById('quality-subtask-info').style.display = 'none';
+  }
+
   openModal('quality-modal');
 }
 
@@ -1246,12 +1275,13 @@ async function confirmCompletion() {
 
   // API'ye gönder
   try {
-    // Tamamlanan alt görevleri topla
+    // Tamamlanan alt görevleri topla — DOM'dan oku
     const doneSubtasks = Array.from(document.querySelectorAll(`[id^="sub-${t.id}-"].done`))
-      .map((el,_,arr) => {
-        const idx = parseInt(el.id.split('-').pop());
-        return t.subtasks[idx] || '';
-      }).filter(Boolean);
+      .map(el => { const idx=parseInt(el.id.split('-').pop()); return t.subtasks[idx]||''; })
+      .filter(Boolean);
+
+    // Önizleme puanı (backend'den kesin gelir)
+    const earned = calcSubtaskEarnedClient(t.pts, t.subtasks||[], doneSubtasks);
 
     SoundEngine.play('whoosh');
     await CompletionsAPI.complete({
