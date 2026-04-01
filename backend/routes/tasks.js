@@ -17,23 +17,14 @@ router.get('/', (req, res) => {
   res.json(parsed);
 });
 
-// GET /api/tasks/today/:childId  — bugünün görevleri + tamamlama durumu
+// GET /api/tasks/today/:childId  — bugünün görevleri + tüm tamamlama durumları
 router.get('/today/:childId', (req, res) => {
   const today = new Date().toISOString().split('T')[0];
-  const dow   = new Date().getDay(); // 0=Pazar, 1=Pzt ... 6=Cmt
+  const dow   = new Date().getDay();
 
+  // Görevleri getir
   const tasks = db.prepare(`
-    SELECT t.*,
-      c.id            AS comp_id,
-      c.status        AS comp_status,
-      c.quality       AS comp_quality,
-      c.pts_awarded   AS comp_pts,
-      c.subtasks_done AS comp_subtasks_done
-    FROM tasks t
-    LEFT JOIN completions c
-      ON c.task_id = t.id
-      AND c.child_id = ?
-      AND c.due_date = ?
+    SELECT t.* FROM tasks t
     WHERE t.family_id = ?
       AND t.is_active = 1
       AND (
@@ -42,17 +33,72 @@ router.get('/today/:childId', (req, res) => {
         OR (t.recurrence = 'weekly'   AND ? = 1)
       )
     ORDER BY t.category, t.title
-  `).all(req.params.childId, today, req.user.family_id, dow, dow);
+  `).all(req.user.family_id, dow, dow);
 
-  const parsed = tasks.map(t => ({
-    ...t,
-    subtasks: JSON.parse(t.subtasks || '[]'),
-    completion: t.comp_id ? {
-      id: t.comp_id, status: t.comp_status,
-      quality: t.comp_quality, pts: t.comp_pts,
-      subtasks_done: JSON.parse(t.comp_subtasks_done || '[]')
-    } : null
-  }));
+  // Bugünkü tüm completion'ları getir
+  const completions = db.prepare(`
+    SELECT * FROM completions
+    WHERE child_id = ? AND due_date = ?
+    ORDER BY completed_at ASC
+  `).all(req.params.childId, today);
+
+  const compByTask = {};
+  completions.forEach(c => {
+    if (!compByTask[c.task_id]) compByTask[c.task_id] = [];
+    compByTask[c.task_id].push(c);
+  });
+
+  const parsed = tasks.map(t => {
+    const allSubs   = JSON.parse(t.subtasks || '[]');
+    const taskComps = compByTask[t.id] || [];
+
+    // Tüm onaylanan ve bekleyen completion'lardan done subtask listesi birleştir
+    const approvedDone = taskComps
+      .filter(c => c.status === 'approved')
+      .flatMap(c => JSON.parse(c.subtasks_done || '[]'));
+    const pendingDone = taskComps
+      .filter(c => c.status === 'pending')
+      .flatMap(c => JSON.parse(c.subtasks_done || '[]'));
+
+    // Tüm tamamlanan alt görevler (tekrar yok)
+    const allDone = [...new Set([...approvedDone, ...pendingDone])];
+
+    // En son pending completion (varsa)
+    const latestPending = taskComps.find(c => c.status === 'pending');
+    // En son approved
+    const latestApproved = [...taskComps].reverse().find(c => c.status === 'approved');
+
+    // Görevin genel durumu
+    let overallStatus = null;
+    if (allSubs.length === 0) {
+      // Alt görev yok: tek completion'ı bak
+      if (latestPending) overallStatus = 'pending';
+      else if (latestApproved) overallStatus = 'approved';
+    } else {
+      // Alt görev var: hepsi tamamlandı mı?
+      const remaining = allSubs.filter(s => !allDone.includes(s));
+      if (remaining.length === 0 && allDone.length > 0) {
+        overallStatus = latestPending ? 'pending' : 'approved';
+      } else if (allDone.length > 0) {
+        // Kısmi tamamlama
+        overallStatus = latestPending ? 'pending' : (approvedDone.length > 0 ? 'partial' : null);
+      }
+    }
+
+    return {
+      ...t,
+      subtasks: allSubs,
+      completion: taskComps.length > 0 ? {
+        id:            latestPending?.id || latestApproved?.id,
+        status:        overallStatus,
+        quality:       latestPending?.quality || latestApproved?.quality,
+        pts:           taskComps.filter(c=>c.status==='approved').reduce((s,c)=>s+c.pts_awarded,0),
+        subtasks_done: allDone,           // tüm tamamlananlar
+        approved_done: approvedDone,      // sadece onaylananlar
+        pending_done:  pendingDone,       // bekleyenler
+      } : null
+    };
+  });
 
   res.json(parsed);
 });
