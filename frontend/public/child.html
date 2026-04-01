@@ -654,6 +654,19 @@ body {
 }
 .btn-add-task:hover { background: var(--purple-light); }
 
+/* ── TOAST ── */
+.child-toast {
+  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
+  z-index: 999; max-width: 340px; width: 90%;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 16px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700;
+  opacity: 0; pointer-events: none;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+}
+.child-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
 /* young mode tweaks */
 body.young .task-info h3 { font-size: 17px; }
 body.young .task-card { padding: 18px; }
@@ -863,6 +876,12 @@ body.young .reward-card { width: 140px; }
   </div>
 </div>
 
+<!-- Toast -->
+<div class="child-toast" id="child-toast">
+  <span id="child-toast-icon">✅</span>
+  <span id="child-toast-msg"></span>
+</div>
+
 <!-- Nav bar -->
 <div class="nav-bar">
   <div class="nav-item active">
@@ -1036,9 +1055,12 @@ function renderTasks(cat='all') {
 
   filtered.forEach(t => {
     const div = document.createElement('div');
-    div.className = `task-card${(t.done||t.pending)?' done':''}`;
+    const isBlocked = t.done || t.pending;
+    div.className = `task-card${isBlocked?' done':''}`;
     div.dataset.color = t.color;
-    div.onclick = () => !t.done && openTask(t);
+    // Sadece tamamlanmamış ve pending olmayan görevler tıklanabilir
+    if (!isBlocked) div.onclick = () => openTask(t);
+    else div.style.cursor = 'default';
     div.innerHTML = `
       <div class="task-header">
         <div class="task-icon">${t.icon}</div>
@@ -1257,7 +1279,16 @@ async function confirmCompletion() {
     updatePointsDisplay();
   } catch(e) {
     // Aynı görev bugün zaten tamamlandıysa
-    alert(e.message || 'Görev gönderilemedi');
+    if (e.message && e.message.includes('zaten')) {
+      showToast('⏳', 'Bu görev zaten ebeveyn onayı bekliyor!');
+    } else {
+      showToast('❌', e.message || 'Görev gönderilemedi');
+    }
+    // Görevi pending olarak işaretle (yerel state güncelle)
+    if (currentTask) {
+      const t = tasks.find(x => x.id === currentTask.id);
+      if (t) { t.pending = true; renderTasks(); updateProgress(); }
+    }
   }
 }
 
@@ -1326,6 +1357,17 @@ function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   if(id==='task-modal') stopTimer();
+}
+
+// ── TOAST ──
+let childToastTimer;
+function showToast(icon, msg) {
+  const t = document.getElementById('child-toast');
+  document.getElementById('child-toast-icon').textContent = icon;
+  document.getElementById('child-toast-msg').textContent  = msg;
+  t.classList.add('show');
+  clearTimeout(childToastTimer);
+  childToastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 
 // ── BAŞLAT ──
