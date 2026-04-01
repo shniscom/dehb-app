@@ -1669,21 +1669,20 @@ async function rejectClaim(claimId) {
 }
 
 async function claimReward(id) {
-  // Bu ebeveyn panelinde direkt onaylama
-  if (!confirm('Bu ödülü ver ve puanı düş?')) return;
+  if (!currentChildId) { showToast('⚠️','Önce bir çocuk seçin'); return; }
   const r = rewardsList.find(x=>x.id===id);
-  if (!r || !currentChildId) return;
+  if (!r) return;
+  if (!confirm(`"${r.title||r.name}" ödülünü ver ve ${r.pts_required} puanı düş?`)) return;
   try {
-    // Önce claim oluştur, hemen onayla
-    const claim = await fetch(`/api/rewards/${id}/claim`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+Auth.getToken()},
-      // Ebeveyn kendi adına değil çocuk adına claim açamaz direkt
-      // Bu yüzden mevcut claim'i approve ederiz
-    });
+    const res = await RewardsAPI.give(id, currentChildId);
     showToast('🎉',`"${r.title||r.name}" ödülü verildi!`);
+    // Çocuğun güncel puanını güncelle
+    childrenData = await FamilyAPI.listChildren().catch(()=>childrenData);
+    const c = childrenData.find(x=>x.id===currentChildId);
+    if (c) currentChildPts = c.total_points;
+    updateSidebarChildren();
     await loadAndRenderRewards();
-  } catch(e) { showToast('❌',e.message||'İşlem başarısız'); }
+  } catch(e) { showToast('❌', e.message||'İşlem başarısız'); }
 }
 
 // ── REPORT ──
