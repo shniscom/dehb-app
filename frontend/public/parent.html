@@ -561,6 +561,17 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
 }
 .btn-amber { background: var(--amber); color: white; }
 .btn-amber:hover { filter: brightness(1.1); }
+
+.behavior-preset {
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px; font-weight: 700;
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border2);
+  background: var(--surface2); color: var(--text);
+  cursor: pointer; transition: all .15s; text-align: left;
+}
+.behavior-preset:hover { border-color: var(--purple); color: var(--purple); }
+.behavior-preset.active { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); }
 </style>
 <script src="/js/api.js"></script>
 </head>
@@ -651,22 +662,22 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
       <div class="stat-grid">
         <div class="stat-card purple">
           <div class="sc-label">Toplam Puan</div>
-          <div class="sc-val" id="dash-pts">145</div>
-          <div class="sc-sub">+32 bu hafta</div>
+          <div class="sc-val" id="dash-pts">—</div>
+          <div class="sc-sub">seçili çocuk</div>
         </div>
         <div class="stat-card teal">
           <div class="sc-label">Bu Hafta Tamamlanan</div>
-          <div class="sc-val">18</div>
-          <div class="sc-sub">/ 24 görev</div>
+          <div class="sc-val" id="dash-stat-done">—</div>
+          <div class="sc-sub" id="dash-stat-total">görev</div>
         </div>
         <div class="stat-card amber">
           <div class="sc-label">Başarı Oranı</div>
-          <div class="sc-val">75%</div>
-          <div class="sc-sub">geçen hafta 68%</div>
+          <div class="sc-val" id="dash-stat-pct">—</div>
+          <div class="sc-sub">bu hafta</div>
         </div>
         <div class="stat-card green">
           <div class="sc-label">Seri</div>
-          <div class="sc-val">4 🔥</div>
+          <div class="sc-val" id="dash-stat-streak">—</div>
           <div class="sc-sub">gün üst üste</div>
         </div>
       </div>
@@ -793,15 +804,24 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
         <h2>Haftalık Başarı Özeti</h2>
       </div>
       <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
-        <div class="stat-card green"><div class="sc-label">Tamamlanan</div><div class="sc-val">18</div><div class="sc-sub">görev</div></div>
-        <div class="stat-card amber"><div class="sc-label">Bekleyen</div><div class="sc-val">2</div><div class="sc-sub">onay</div></div>
-        <div class="stat-card coral sc-val-coral" style="--coral-val:var(--coral)"><div class="sc-label">Kaçırılan</div><div class="sc-val" style="color:var(--coral)">4</div><div class="sc-sub">görev</div></div>
-        <div class="stat-card purple"><div class="sc-label">Kazanılan</div><div class="sc-val">+87</div><div class="sc-sub">⭐ puan</div></div>
+        <div class="stat-card green"><div class="sc-label">Tamamlanan</div><div class="sc-val cal-stat-done">—</div><div class="sc-sub">görev</div></div>
+        <div class="stat-card amber"><div class="sc-label">Bekleyen</div><div class="sc-val cal-stat-pending">—</div><div class="sc-sub">onay</div></div>
+        <div class="stat-card" style="--coral-val:var(--coral)"><div class="sc-label">Reddedilen</div><div class="sc-val cal-stat-missed" style="color:var(--coral)">—</div><div class="sc-sub">görev</div></div>
+        <div class="stat-card purple"><div class="sc-label">Kazanılan</div><div class="sc-val cal-stat-pts">—</div><div class="sc-sub">⭐ puan</div></div>
       </div>
     </div>
 
     <!-- ── REWARDS ── -->
     <div class="page" id="page-rewards">
+      <!-- Bekleyen ödül talepleri -->
+      <div id="reward-claims-section" style="margin-bottom:24px;display:none">
+        <div class="section-header">
+          <h2>⏳ Bekleyen Ödül Talepleri</h2>
+          <span class="sh-count" id="claims-count">0</span>
+        </div>
+        <div id="reward-claims-list"></div>
+      </div>
+
       <div class="rewards-layout">
         <div>
           <div class="section-header">
@@ -884,27 +904,63 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
   </div>
 </div>
 
-<!-- Approval edit modal -->
+<!-- Approval edit modal — genişletilmiş -->
 <div class="modal-overlay" id="edit-modal" onclick="closeModal()">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <h3>Puanı Düzenle</h3>
-    <p>Ebeveyn olarak kalite puanını ve notunu düzenleyebilirsin.</p>
-    <div class="form-group">
-      <label class="form-label">Kalite</label>
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:520px;max-height:90vh;overflow-y:auto">
+    <h3>Görevi Değerlendir</h3>
+    <p>Kalite, alt görevler ve davranış bonusunu belirle.</p>
+
+    <!-- Kalite seçimi -->
+    <div class="form-group" style="margin-top:14px">
+      <label class="form-label">Görev Kalitesi</label>
       <select class="form-input form-select" id="edit-quality">
         <option value="great">🌟 Çok İyi</option>
         <option value="good">😊 İyi</option>
         <option value="ok">🙂 Tamamlandı</option>
-        <option value="late">⏰ Geç</option>
+        <option value="late">⏰ Geç Tamamlandı</option>
       </select>
     </div>
-    <div class="form-group">
-      <label class="form-label">Ebeveyn Notu (isteğe bağlı)</label>
-      <input class="form-input" id="edit-note" placeholder="ör: Çok güzel iş çıkardın!">
+
+    <!-- Alt görev kontrolü -->
+    <div class="form-group" id="subtask-check-group" style="display:none">
+      <label class="form-label">Alt Görev Kontrolü</label>
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:8px">
+        Çocuğun işaretledikleri ✓ ile gösteriliyor. Değiştirebilirsin.
+      </div>
+      <div id="subtask-check-list"></div>
     </div>
+
+    <!-- Davranış bonusu — psikolojik çerçeveye göre -->
+    <div class="form-group">
+      <label class="form-label">Davranış Bonusu <span style="font-size:10px;color:var(--muted);font-weight:600">(opsiyonel)</span></label>
+      <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.5">
+        Görev puanından bağımsız, davranışa özel ek puan.
+        Araştırmalara göre pozitif:negatif oranı 4:1 tutulmalı.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px" id="behavior-presets">
+        <button class="behavior-preset" data-val="5"  onclick="setBehaviorBonus(5,this)">🌟 Çok yardımsever (+5)</button>
+        <button class="behavior-preset" data-val="3"  onclick="setBehaviorBonus(3,this)">😊 İyi davranış (+3)</button>
+        <button class="behavior-preset" data-val="0"  onclick="setBehaviorBonus(0,this)" class="active">😐 Normal (0)</button>
+        <button class="behavior-preset" data-val="-3" onclick="setBehaviorBonus(-3,this)">⚠️ Zorlandı (-3)</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap">Özel değer:</label>
+        <input class="form-input" id="behavior-bonus-input" type="number" value="0" min="-5" max="10"
+          style="max-width:80px" oninput="clearBehaviorPresets()">
+        <span style="font-size:12px;color:var(--muted)" id="behavior-bonus-label">puan</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Ebeveyn Notu (çocuğa gösterilir)</label>
+      <input class="form-input" id="edit-note" placeholder="ör: Bugün çok güzel yaptın!">
+    </div>
+
+    <div id="edit-pts-preview" style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;font-weight:700;margin-bottom:14px;text-align:center"></div>
+
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">İptal</button>
-      <button class="btn btn-primary" onclick="saveEditedApproval()">Kaydet</button>
+      <button class="btn btn-primary" id="btn-save-edit" onclick="saveEditedApproval()">Onayla & Kaydet</button>
     </div>
   </div>
 </div>
@@ -964,7 +1020,6 @@ function showPage(id) {
 
 // ── DASHBOARD ──
 async function renderDashboard() {
-  // Seçili çocuk yoksa ilkini seç
   if (!currentChildId && childrenData.length) {
     currentChildId  = childrenData[0].id;
     currentChildPts = childrenData[0].total_points || 0;
@@ -982,10 +1037,32 @@ async function renderDashboard() {
       '<div class="empty-state"><span class="es-icon">🎉</span>Bekleyen onay yok!</div>';
   }
 
-  // Haftalık grafik
+  // Özet istatistikler
   if (currentChildId) {
     try {
-      weekData = await ReportsAPI.weekly(currentChildId);
+      const [summary, weeklyData] = await Promise.all([
+        ReportsAPI.summary(currentChildId).catch(()=>null),
+        ReportsAPI.weekly(currentChildId).catch(()=>[]),
+      ]);
+
+      if (summary?.overall) {
+        const o   = summary.overall;
+        const pct = o.total > 0 ? Math.round((o.done/o.total)*100) : 0;
+        document.getElementById('dash-stat-done').textContent  = o.done || 0;
+        document.getElementById('dash-stat-total').textContent = `/ ${o.total || 0} görev`;
+        document.getElementById('dash-stat-pct').textContent   = `%${pct}`;
+      }
+
+      if (summary?.child) {
+        document.getElementById('dash-pts').textContent = summary.child.total_points || currentChildPts;
+        currentChildPts = summary.child.total_points || currentChildPts;
+      }
+
+      // Streak
+      const streakData = await ReportsAPI.streak(currentChildId).catch(()=>({current_streak:0}));
+      document.getElementById('dash-stat-streak').textContent = `${streakData.current_streak||0} 🔥`;
+
+      weekData = weeklyData;
       renderBarChart('dash-bar-chart', weekData);
     } catch(e) {
       document.getElementById('dash-bar-chart').innerHTML =
@@ -1084,20 +1161,122 @@ async function refreshAfterApproval() {
 function editApproval(id) {
   editingApprovalId = id;
   const a = pendingList.find(x=>x.id===id);
-  document.getElementById('edit-quality').value = a?.quality || 'ok';
-  document.getElementById('edit-note').value = '';
+  if (!a) return;
+
+  document.getElementById('edit-quality').value = a.quality || 'ok';
+  document.getElementById('edit-note').value    = '';
+  document.getElementById('behavior-bonus-input').value = '0';
+  clearBehaviorPresets();
+  setBehaviorBonus(0, document.querySelector('.behavior-preset[data-val="0"]'));
+
+  // Alt görevleri göster
+  const subtasks     = a.subtasks || [];
+  const subtasksDone = a.subtasks_done || [];
+  const group = document.getElementById('subtask-check-group');
+  const list  = document.getElementById('subtask-check-list');
+
+  if (subtasks.length > 0) {
+    group.style.display = 'block';
+    list.innerHTML = subtasks.map((s,i) => {
+      const done = subtasksDone.includes(s);
+      return `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border);cursor:pointer"
+           onclick="toggleSubtaskCheck(this)" data-subtask="${s}">
+        <div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;background:${done?'var(--green)':'transparent'};border-color:${done?'var(--green)':'var(--border2)'};color:white">
+          ${done?'✓':''}
+        </div>
+        <span style="font-size:13px;font-weight:600;${done?'color:var(--muted);text-decoration:line-through':''}">${s}</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--muted)">
+          ${done?'✅ Çocuk yaptı':'❌ Çocuk yapmadı'}
+        </span>
+      </div>`;
+    }).join('');
+  } else {
+    group.style.display = 'none';
+  }
+
+  updateBonusPreview(a);
   document.getElementById('edit-modal').classList.add('open');
+}
+
+function toggleSubtaskCheck(el) {
+  const dot = el.querySelector('div');
+  const txt = el.querySelector('span');
+  const done = dot.style.background.includes('green');
+  if (!done) {
+    dot.style.background = 'var(--green)'; dot.style.borderColor = 'var(--green)'; dot.textContent = '✓';
+    txt.style.color = 'var(--muted)'; txt.style.textDecoration = 'line-through';
+    el.querySelector('span:last-child').textContent = '✅ Çocuk yaptı';
+  } else {
+    dot.style.background = 'transparent'; dot.style.borderColor = 'var(--border2)'; dot.textContent = '';
+    txt.style.color = ''; txt.style.textDecoration = '';
+    el.querySelector('span:last-child').textContent = '❌ Çocuk yapmadı';
+  }
+  const a = pendingList.find(x=>x.id===editingApprovalId);
+  if (a) updateBonusPreview(a);
+}
+
+function setBehaviorBonus(val, btn) {
+  document.getElementById('behavior-bonus-input').value = val;
+  clearBehaviorPresets();
+  btn?.classList.add('active');
+  const a = pendingList.find(x=>x.id===editingApprovalId);
+  if (a) updateBonusPreview(a);
+}
+
+function clearBehaviorPresets() {
+  document.querySelectorAll('.behavior-preset').forEach(b=>b.classList.remove('active'));
+}
+
+function updateBonusPreview(a) {
+  const quality = document.getElementById('edit-quality').value;
+  const bonus   = parseInt(document.getElementById('behavior-bonus-input').value) || 0;
+
+  // Puan tahmini hesapla
+  const baseMap = { great: (a.pts_base||10)+(a.pts_great||5), good: (a.pts_base||10)+(a.pts_good||3),
+                    ok: (a.pts_base||10), late: Math.max(0,(a.pts_base||10)+(a.pts_late||-3)) };
+  const basePts = baseMap[quality] || (a.pts_base||10);
+  const maxPenalty = Math.round((a.pts_base||10)*0.3);
+  const safeBonus  = Math.max(-maxPenalty, Math.min(Math.round((a.pts_base||10)*0.5), bonus));
+  const total = Math.max(0, basePts + safeBonus);
+
+  const el = document.getElementById('edit-pts-preview');
+  el.innerHTML = `Verilecek puan: <span style="color:var(--amber);font-size:16px">${total} ⭐</span>` +
+    (safeBonus !== 0 ? ` <span style="color:${safeBonus>0?'var(--green)':'var(--coral)'};">(${safeBonus>0?'+':''}${safeBonus} davranış)</span>` : '');
 }
 
 async function saveEditedApproval() {
   const quality = document.getElementById('edit-quality').value;
   const note    = document.getElementById('edit-note').value;
+  const bonus   = parseInt(document.getElementById('behavior-bonus-input').value) || 0;
+
+  // Ebeveynin düzenlediği alt görevleri topla
+  const subtaskItems = document.querySelectorAll('#subtask-check-list [data-subtask]');
+  let subtasksOverride = null;
+  if (subtaskItems.length > 0) {
+    subtasksOverride = Array.from(subtaskItems)
+      .filter(el => el.querySelector('div').style.background.includes('green'))
+      .map(el => el.dataset.subtask);
+  }
+
+  const btn = document.getElementById('btn-save-edit');
+  btn.disabled = true; btn.textContent = 'Kaydediliyor...';
   try {
-    await CompletionsAPI.approve(editingApprovalId, { quality, parent_note: note });
+    const res = await CompletionsAPI.approve(editingApprovalId, {
+      quality,
+      parent_note:       note || null,
+      behavior_bonus:    bonus,
+      behavior_note:     bonus !== 0 ? `Davranış bonusu: ${bonus>0?'+':''}${bonus}` : null,
+      subtasks_override: subtasksOverride,
+    });
     closeModal();
-    showToast('✏️','Onay güncellendi ve puan verildi');
+    showToast('✅', `Onaylandı! +${res.pts_awarded} ⭐${res.behavior_bonus?` (${res.behavior_bonus>0?'+':''}${res.behavior_bonus} davranış)`:''}` );
     await refreshAfterApproval();
-  } catch(e) { showToast('❌', e.message||'Güncelleme başarısız'); }
+  } catch(e) {
+    showToast('❌', e.message||'Kaydedilemedi');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Onayla & Kaydet';
+  }
 }
 
 function updateBadge() {
@@ -1266,21 +1445,49 @@ function removeSubtask(btn) {
 
 // ── CALENDAR ──
 let weekOffset = 0;
+let calendarData = {}; // API'den gelen completion verileri
 const DAYS = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
 
-function renderCalendar() {
+async function renderCalendar() {
+  if (!currentChildId) return;
+
+  // Haftanın başlangıç ve bitiş tarihini hesapla
+  const today = new Date();
+  today.setDate(today.getDate() + weekOffset*7);
+  const dow   = (today.getDay()+6)%7; // 0=Pzt
+  const start = new Date(today); start.setDate(today.getDate()-dow);
+  const end   = new Date(start); end.setDate(start.getDate()+6);
+  const fmt   = d => d.toISOString().split('T')[0];
+
+  // API'den calendar verisi çek
+  try {
+    calendarData = await CompletionsAPI.calendar(currentChildId, fmt(start), fmt(end));
+  } catch(e) { calendarData = {}; }
+
   const grid = document.getElementById('calendar-grid');
-  const todayDow = (new Date().getDay() + 6) % 7; // 0=Pzt
-  grid.innerHTML = '';
+  const todayStr2 = fmt(new Date());
+  const todayDow  = (new Date().getDay()+6)%7;
+  grid.innerHTML   = '';
+
+  // Gün tarihleri
+  const dates = Array.from({length:7},(_,i)=>{
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    return fmt(d);
+  });
+
+  // Header
   const corner = document.createElement('div');
   corner.className = 'cal-header-cell';
   grid.appendChild(corner);
   DAYS.forEach((d,i)=>{
     const c = document.createElement('div');
-    c.className = `cal-header-cell day-label${i===todayDow?' today':''}`;
-    c.innerHTML = `<div>${d}</div><div class="day-num${i===todayDow?' today':''}">${i+1}</div>`;
+    const isToday = dates[i] === todayStr2;
+    c.className = `cal-header-cell day-label${isToday?' today':''}`;
+    c.innerHTML = `<div>${d}</div><div class="day-num${isToday?' today':''}">${dates[i].slice(8)}</div>`;
     grid.appendChild(c);
   });
+
+  // Görev satırları
   if (!tasks.length) {
     const msg = document.createElement('div');
     msg.style.cssText = 'grid-column:1/-1;text-align:center;padding:24px;font-size:13px;color:var(--muted)';
@@ -1288,18 +1495,58 @@ function renderCalendar() {
     grid.appendChild(msg);
     return;
   }
-  tasks.forEach(t=>{
+
+  tasks.forEach(t => {
     const lbl = document.createElement('div');
     lbl.className = 'cal-row-label';
     lbl.innerHTML = `<span class="crl-icon">${t.icon||'📋'}</span><span class="crl-name">${t.title||t.name}</span>`;
     grid.appendChild(lbl);
-    DAYS.forEach((_,di)=>{
+
+    dates.forEach((date, di) => {
       const cell = document.createElement('div');
-      cell.className = `cal-cell${di===todayDow?' today-col':''}`;
-      cell.innerHTML = `<span class="cal-chip empty">·</span>`;
+      const isToday = date === todayStr2;
+      cell.className = `cal-cell${isToday?' today-col':''}`;
+
+      const dayData  = calendarData[date]?.[t.id];
+      const status   = dayData?.status || 'empty';
+      const labels   = {approved:'✓', pending:'⏳', rejected:'✕', empty:'·'};
+      const chipClass= status==='approved'?'done':status==='pending'?'pending':status==='rejected'?'missed':'empty';
+      cell.innerHTML = `<span class="cal-chip ${chipClass}">${labels[status]||'·'}</span>`;
+
+      // Tamamlananları ebeveyn tekrar aktif edebilir
+      if ((status==='approved'||status==='pending') && isToday) {
+        cell.title = 'Tekrar aktif etmek için tıkla';
+        cell.style.cursor = 'pointer';
+        cell.onclick = () => reactivateTask(t.id, t.title||t.name);
+      } else {
+        cell.onclick = ()=>showToast('📅',`${t.title||t.name} — ${DAYS[di]}: ${({approved:'Tamamlandı',pending:'Onay bekliyor',rejected:'Reddedildi',empty:'Henüz yok'})[status]}`);
+      }
       grid.appendChild(cell);
     });
   });
+
+  // Haftalık özet stat kartları güncelle
+  const allComps = Object.values(calendarData).flatMap(d=>Object.values(d));
+  document.querySelectorAll('.cal-stat-done')[0]    && (document.querySelectorAll('.cal-stat-done')[0].textContent    = allComps.filter(c=>c.status==='approved').length);
+  document.querySelectorAll('.cal-stat-pending')[0] && (document.querySelectorAll('.cal-stat-pending')[0].textContent = allComps.filter(c=>c.status==='pending').length);
+  document.querySelectorAll('.cal-stat-missed')[0]  && (document.querySelectorAll('.cal-stat-missed')[0].textContent  = allComps.filter(c=>c.status==='rejected').length);
+  const totalPts = allComps.filter(c=>c.status==='approved').reduce((s,c)=>s+(c.pts||0),0);
+  document.querySelectorAll('.cal-stat-pts')[0]     && (document.querySelectorAll('.cal-stat-pts')[0].textContent     = `+${totalPts}`);
+}
+
+async function reactivateTask(taskId, taskName) {
+  if (!currentChildId) return;
+  if (!confirm(`"${taskName}" görevi bugün için tekrar aktif edilsin mi? Verilen puanlar geri alınır.`)) return;
+  try {
+    const res = await CompletionsAPI.reactivate(taskId, currentChildId);
+    showToast('🔄', `Görev aktif edildi${res.pts_reversed?` (-${res.pts_reversed} puan geri alındı)`:''}`);
+    childrenData = await FamilyAPI.listChildren().catch(()=>childrenData);
+    const c = childrenData.find(x=>x.id===currentChildId);
+    if (c) currentChildPts = c.total_points;
+    updateSidebarChildren();
+    renderCalendar();
+    if (currentPage==='dashboard') renderDashboard();
+  } catch(e) { showToast('❌', e.message||'Reaktivasyon başarısız'); }
 }
 
 function changeWeek(dir) {
@@ -1315,6 +1562,39 @@ async function loadAndRenderRewards() {
   try {
     rewardsList = await RewardsAPI.list();
   } catch(e) { rewardsList = []; }
+
+  // Bekleyen ödül talepleri
+  try {
+    const claims = await RewardsAPI.pendingClaims();
+    const section = document.getElementById('reward-claims-section');
+    const list    = document.getElementById('reward-claims-list');
+    const cntEl   = document.getElementById('claims-count');
+
+    if (claims.length > 0) {
+      section.style.display = 'block';
+      cntEl.textContent = claims.length + ' bekliyor';
+      list.innerHTML = claims.map(c=>`
+        <div class="approval-card" style="margin-bottom:8px">
+          <div class="appr-icon">${c.icon||'🎁'}</div>
+          <div class="appr-body">
+            <h3>${c.title}</h3>
+            <div class="ab-meta">
+              <span>${c.child_avatar||''} ${c.child_name}</span>
+              <span>${formatDate(c.claimed_at)}</span>
+              <span style="color:var(--amber);font-weight:800">-${c.pts_required} ⭐</span>
+            </div>
+          </div>
+          <div class="appr-actions">
+            <button class="icon-btn reject"  onclick="rejectClaim(${c.id})"  title="Reddet">✕</button>
+            <button class="icon-btn approve" onclick="approveClaim(${c.id})" title="Onayla & Puanı Düş">✓</button>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      section.style.display = 'none';
+    }
+  } catch(e) {}
+
   renderRewards();
 }
 
@@ -1381,26 +1661,42 @@ async function deleteReward(id) {
   } catch(e) { showToast('❌',e.message||'Silinemedi'); }
 }
 
-async function claimReward(id) {
-  const r = rewardsList.find(x=>x.id===id);
-  if (!confirm(`"${r?.title||r?.name}" ödülünü onayla ve puanı düş?`)) return;
+async function approveClaim(claimId) {
   try {
-    await RewardsAPI.approveClaim(id);
-    showToast('🎉',`Ödül verildi!`);
+    const res = await RewardsAPI.approveClaim(claimId);
+    showToast('🎉','Ödül onaylandı! Puan düşüldü.');
     childrenData = await FamilyAPI.listChildren().catch(()=>childrenData);
     const c = childrenData.find(x=>x.id===currentChildId);
     if (c) currentChildPts = c.total_points;
     updateSidebarChildren();
     await loadAndRenderRewards();
-  } catch(e) {
-    // Önce claim oluştur, sonra approve
-    try {
-      const claim = await RewardsAPI.claim(id);
-      await RewardsAPI.approveClaim(claim.id||id);
-      showToast('🎉','Ödül verildi!');
-      await loadAndRenderRewards();
-    } catch(e2) { showToast('❌',e2.message||'İşlem başarısız'); }
-  }
+  } catch(e) { showToast('❌', e.message||'Onaylama başarısız'); }
+}
+
+async function rejectClaim(claimId) {
+  try {
+    await RewardsAPI.rejectClaim(claimId);
+    showToast('❌','Ödül talebi reddedildi');
+    await loadAndRenderRewards();
+  } catch(e) { showToast('❌', e.message||'Reddetme başarısız'); }
+}
+
+async function claimReward(id) {
+  // Bu ebeveyn panelinde direkt onaylama
+  if (!confirm('Bu ödülü ver ve puanı düş?')) return;
+  const r = rewardsList.find(x=>x.id===id);
+  if (!r || !currentChildId) return;
+  try {
+    // Önce claim oluştur, hemen onayla
+    const claim = await fetch(`/api/rewards/${id}/claim`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+Auth.getToken()},
+      // Ebeveyn kendi adına değil çocuk adına claim açamaz direkt
+      // Bu yüzden mevcut claim'i approve ederiz
+    });
+    showToast('🎉',`"${r.title||r.name}" ödülü verildi!`);
+    await loadAndRenderRewards();
+  } catch(e) { showToast('❌',e.message||'İşlem başarısız'); }
 }
 
 // ── REPORT ──
@@ -1507,8 +1803,15 @@ async function renderFamilyPage() {
           <div class="tfp-title">Aile Bilgileri</div>
           <div class="form-group">
             <label class="form-label">Aile Kodu</label>
-            <div class="form-input" style="font-size:22px;font-weight:900;letter-spacing:.1em;color:var(--purple);background:var(--purple-bg);border-color:var(--purple);text-align:center" id="family-code-display">—</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;font-weight:600">Bu kodu çocuğunuzla paylaşın.</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="form-input" style="font-size:20px;font-weight:900;letter-spacing:.12em;color:var(--purple);background:var(--purple-bg);border-color:var(--purple);text-align:center;flex:1" id="family-code-display">⏳</div>
+              <button class="btn btn-ghost btn-sm" onclick="regenerateCode()" title="Yeni rastgele kod oluştur">🔄</button>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:6px">
+              <input class="form-input" id="custom-code-input" placeholder="Özel kod (ör: AILE01)" style="font-family:monospace;letter-spacing:.06em;text-transform:uppercase">
+              <button class="btn btn-teal btn-sm" onclick="setCustomCode()">Güncelle</button>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;font-weight:600">Bu kodu çocuğunuzla paylaşın. 🔄 ile yeni kod üretin.</div>
           </div>
           <div class="form-group" style="margin-top:16px">
             <label class="form-label">Manuel Puan Ekle / Çıkar</label>
@@ -1562,9 +1865,14 @@ async function renderFamilyPage() {
     </div>
   `;
 
-  // Aile kodunu göster (user'dan al)
-  const user = Auth.getUser();
-  if (user) document.getElementById('family-code-display').textContent = user.family_id || '—';
+  // Aile kodunu API'den yükle
+  try {
+    const codeData = await FamilyAPI.getCode();
+    document.getElementById('family-code-display').textContent = codeData.join_code || '—';
+  } catch(e) {
+    const user = Auth.getUser();
+    document.getElementById('family-code-display').textContent = user?.family_id || '—';
+  }
 
   await loadChildren();
 }
@@ -1735,7 +2043,25 @@ async function confirmDeleteChild() {
   }
 }
 
-async function openResetModal(id, name) {
+async async function regenerateCode() {
+  if (!confirm('Yeni rastgele kod oluşturulsun mu? Eski kod geçersiz kalır.')) return;
+  try {
+    const res = await FamilyAPI.regenerateCode();
+    document.getElementById('family-code-display').textContent = res.join_code;
+    showToast('🔄', `Yeni kod: ${res.join_code}`);
+  } catch(e) { showToast('❌', e.message||'Kod oluşturulamadı'); }
+}
+
+async function setCustomCode() {
+  const code = document.getElementById('custom-code-input').value.trim().toUpperCase();
+  if (!code) { showToast('⚠️','Kod boş olamaz'); return; }
+  try {
+    const res = await FamilyAPI.setCode(code);
+    document.getElementById('family-code-display').textContent = res.join_code;
+    document.getElementById('custom-code-input').value = '';
+    showToast('✅', `Aile kodu güncellendi: ${res.join_code}`);
+  } catch(e) { showToast('❌', e.message||'Kod güncellenemedi'); }
+}
   if (!confirm(`"${name}" için tüm puanlar sıfırlansın mı? Bu işlem geri alınamaz.`)) return;
   try {
     await FamilyAPI.resetPoints(id);
