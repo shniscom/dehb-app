@@ -24,10 +24,11 @@ router.get('/today/:childId', (req, res) => {
 
   const tasks = db.prepare(`
     SELECT t.*,
-      c.id        AS comp_id,
-      c.status    AS comp_status,
-      c.quality   AS comp_quality,
-      c.pts_awarded AS comp_pts
+      c.id            AS comp_id,
+      c.status        AS comp_status,
+      c.quality       AS comp_quality,
+      c.pts_awarded   AS comp_pts,
+      c.subtasks_done AS comp_subtasks_done
     FROM tasks t
     LEFT JOIN completions c
       ON c.task_id = t.id
@@ -48,7 +49,8 @@ router.get('/today/:childId', (req, res) => {
     subtasks: JSON.parse(t.subtasks || '[]'),
     completion: t.comp_id ? {
       id: t.comp_id, status: t.comp_status,
-      quality: t.comp_quality, pts: t.comp_pts
+      quality: t.comp_quality, pts: t.comp_pts,
+      subtasks_done: JSON.parse(t.comp_subtasks_done || '[]')
     } : null
   }));
 
