@@ -1225,10 +1225,19 @@ async function confirmCompletion() {
 
   // API'ye gönder
   try {
+    // Tamamlanan alt görevleri topla
+    const doneSubtasks = Array.from(document.querySelectorAll(`[id^="sub-${t.id}-"].done`))
+      .map((el,_,arr) => {
+        const idx = parseInt(el.id.split('-').pop());
+        return t.subtasks[idx] || '';
+      }).filter(Boolean);
+
+    SoundEngine.play('whoosh');
     await CompletionsAPI.complete({
-      task_id:  t.id,
-      quality:  selectedQuality,
-      was_late: timerSeconds === 0,
+      task_id:       t.id,
+      quality:       selectedQuality,
+      was_late:      timerSeconds === 0,
+      subtasks_done: doneSubtasks,
     });
     // Görevi pending yap
     t.pending = true;
@@ -1245,6 +1254,7 @@ async function confirmCompletion() {
     await loadStreak();
     animatePoints(earned);
     launchConfetti();
+    SoundEngine.play('fanfare');
     updatePointsDisplay();
   } catch(e) {
     // Aynı görev bugün zaten tamamlandıysa
