@@ -2,19 +2,277 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0;url=/login.html">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Görev Kahramanı</title>
+<meta name="theme-color" content="#7c5cbf">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GörevKahraman">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f0e17; --surface:#1a1828; --surface2:#232135;
+  --border:rgba(255,255,255,0.08);
+  --text:#f2f0ff; --muted:rgba(242,240,255,0.55);
+  --purple:#7c5cbf; --purple-light:#a87fff;
+  --purple-glow:rgba(168,127,255,0.2);
+  --teal:#3ecfb2; --teal-glow:rgba(62,207,178,0.2);
+  --amber:#ffb347;
+}
+body{
+  font-family:'Nunito',sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh; min-height:100dvh;
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; overflow:hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Stars */
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:white;opacity:0;animation:twinkle var(--d) ease-in-out infinite var(--delay)}
+@keyframes twinkle{0%,100%{opacity:0}50%{opacity:var(--op)}}
+
+/* Splash */
+.splash{
+  position:fixed;inset:0;z-index:100;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  transition:opacity .5s ease, transform .5s ease;
+}
+.splash.hide{opacity:0;transform:scale(1.05);pointer-events:none}
+.splash-logo{
+  width:90px;height:90px;border-radius:28px;
+  background:linear-gradient(135deg,var(--purple),var(--teal));
+  display:flex;align-items:center;justify-content:center;
+  font-size:48px;line-height:1;
+  animation:logo-bounce .6s cubic-bezier(.34,1.56,.64,1) .2s both;
+  box-shadow:0 8px 32px var(--purple-glow);
+}
+@keyframes logo-bounce{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.splash h1{font-size:26px;font-weight:900;animation:fade-up .4s ease .5s both}
+.splash p{font-size:13px;color:var(--muted);font-weight:600;animation:fade-up .4s ease .6s both}
+.splash-bar{
+  width:160px;height:3px;background:var(--surface2);border-radius:3px;
+  margin-top:24px;overflow:hidden;animation:fade-up .4s ease .7s both;
+}
+.splash-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--purple),var(--teal));animation:load 1.2s ease .8s both}
+@keyframes load{from{width:0}to{width:100%}}
+@keyframes fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Ana içerik */
+.content{position:relative;z-index:1;width:100%;max-width:360px;padding:24px 20px 40px;text-align:center}
+.logo-wrap{margin-bottom:28px;animation:fade-up .5s ease .1s both}
+.logo-icon{
+  width:80px;height:80px;border-radius:24px;
+  background:linear-gradient(135deg,var(--purple),var(--teal));
+  display:flex;align-items:center;justify-content:center;
+  font-size:42px;margin:0 auto 14px;
+  box-shadow:0 6px 24px var(--purple-glow);
+}
+.logo-wrap h1{font-size:24px;font-weight:900}
+.logo-wrap p{font-size:12px;color:var(--muted);font-weight:600;margin-top:4px}
+
+/* Profil kartları */
+.profiles{display:flex;flex-direction:column;gap:12px;animation:fade-up .5s ease .2s both}
+.profile-card{
+  display:flex;align-items:center;gap:16px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;padding:18px 20px;
+  cursor:pointer;text-align:left;
+  transition:all .2s cubic-bezier(.4,0,.2,1);
+  width:100%;font-family:'Nunito',sans-serif;
+  position:relative;overflow:hidden;
+}
+.profile-card::before{
+  content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s;
+  background:linear-gradient(135deg,var(--c1,#7c5cbf),var(--c2,#3ecfb2));
+}
+.profile-card:hover::before,.profile-card:active::before{opacity:0.06}
+.profile-card:active{transform:scale(0.98)}
+.profile-card:hover{border-color:rgba(255,255,255,0.15);transform:translateY(-2px)}
+.pc-emoji{
+  width:52px;height:52px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--c1,#7c5cbf),var(--c2,#3ecfb2));
+  box-shadow:0 4px 12px var(--glow,var(--purple-glow));
+}
+.pc-info{flex:1;position:relative;z-index:1}
+.pc-info h3{font-size:16px;font-weight:800;color:var(--text);margin-bottom:3px}
+.pc-info p{font-size:12px;font-weight:600;color:var(--muted)}
+.pc-arrow{font-size:18px;color:var(--muted);position:relative;z-index:1;transition:transform .2s}
+.profile-card:hover .pc-arrow{transform:translateX(4px)}
+
+/* Ebeveyn kartı - mor */
+.profile-card.parent{--c1:#7c5cbf;--c2:#a87fff;--glow:var(--purple-glow)}
+/* Çocuk kartı - teal */
+.profile-card.child{--c1:#3ecfb2;--c2:#60a5fa;--glow:var(--teal-glow)}
+
+/* Kurulum butonu */
+.install-bar{
+  margin-top:24px;
+  animation:fade-up .5s ease .4s both;
+}
+#btn-install{
+  display:none;align-items:center;gap:8px;
+  padding:11px 22px;border-radius:30px;border:none;cursor:pointer;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--muted);font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;
+  transition:all .2s;
+}
+#btn-install.visible{display:flex;margin:0 auto}
+#btn-install:hover{background:var(--surface);color:var(--text);border-color:rgba(255,255,255,0.2)}
+#btn-install:active{transform:scale(0.97)}
+
+.version-tag{
+  margin-top:20px;font-size:10px;color:var(--muted);font-weight:600;
+  opacity:0.5;animation:fade-up .5s ease .5s both;
+}
+</style>
 </head>
 <body>
+
+<!-- Arkaplan yıldızlar -->
+<div class="stars" id="stars"></div>
+
+<!-- Splash ekranı -->
+<div class="splash" id="splash">
+  <div class="splash-logo">🦸</div>
+  <h1>Görev Kahramanı</h1>
+  <p>DEHB Görev & Puan Takip Sistemi</p>
+  <div class="splash-bar"><div class="splash-fill"></div></div>
+</div>
+
+<!-- Ana içerik -->
+<div class="content" id="main-content" style="display:none">
+  <div class="logo-wrap">
+    <div class="logo-icon">🦸</div>
+    <h1>Görev Kahramanı</h1>
+    <p>Hangi profille devam etmek istiyorsun?</p>
+  </div>
+
+  <div class="profiles">
+    <button class="profile-card parent" onclick="goTo('parent')">
+      <div class="pc-emoji">👨‍👩‍👧</div>
+      <div class="pc-info">
+        <h3>Ebeveyn Girişi</h3>
+        <p>Görevleri yönet · Puanları onayla</p>
+      </div>
+      <span class="pc-arrow">›</span>
+    </button>
+
+    <button class="profile-card child" onclick="goTo('child')">
+      <div class="pc-emoji">🧒</div>
+      <div class="pc-info">
+        <h3>Çocuk Girişi</h3>
+        <p>Görevlerini tamamla · Puan kazan</p>
+      </div>
+      <span class="pc-arrow">›</span>
+    </button>
+  </div>
+
+  <div class="install-bar">
+    <button id="btn-install">
+      <span>📲</span>
+      <span>Telefona Kur</span>
+    </button>
+  </div>
+
+  <div class="version-tag">v2.0 · Görev Kahramanı</div>
+</div>
+
+<script src="/js/api.js"></script>
 <script>
-  // Token varsa doğru sayfaya yönlendir
-  const token = localStorage.getItem('token');
-  const user  = JSON.parse(localStorage.getItem('user') || 'null');
-  if (token && user) {
-    window.location.href = user.role === 'parent' ? '/parent.html' : '/child.html';
-  } else {
-    window.location.href = '/login.html';
+// ── YILDIZLAR ──
+(function(){
+  const c = document.getElementById('stars');
+  for(let i=0;i<50;i++){
+    const s=document.createElement('div'); s.className='star';
+    const sz=Math.random()*2.5+0.5;
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${sz}px;height:${sz}px;--d:${2+Math.random()*5}s;--delay:${Math.random()*6}s;--op:${0.2+Math.random()*0.6}`;
+    c.appendChild(s);
   }
+})();
+
+// ── SERVICE WORKER KAYIT ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('[PWA] SW kaydedildi:', reg.scope))
+      .catch(err => console.warn('[PWA] SW kaydı başarısız:', err));
+  });
+}
+
+// ── TELEFoNA KUR (PWA Install) ──
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('btn-install').classList.add('visible');
+});
+document.getElementById('btn-install').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log('[PWA] Kurulum:', outcome);
+  deferredPrompt = null;
+  document.getElementById('btn-install').classList.remove('visible');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('btn-install').classList.remove('visible');
+});
+
+// ── SPLASH & YÖNLENDİRME ──
+function goTo(role) {
+  const token = Auth.getToken();
+  const user  = Auth.getUser();
+  if (token && user && user.role === role) {
+    window.location.href = role === 'parent' ? '/parent.html' : '/child.html';
+  } else {
+    // Token yok veya farklı rol — login'e git, tab parametresiyle
+    window.location.href = '/login.html?tab=' + role;
+  }
+}
+
+// URL parametresinden tab kontrolü
+function getParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const token = Auth.getToken();
+  const user  = Auth.getUser();
+  const tab   = getParam('tab');
+
+  // Splash animasyonu bitince (1.5s) içeriği göster
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(() => {
+      document.getElementById('splash').style.display='none';
+      document.getElementById('main-content').style.display='block';
+    }, 500);
+
+    // Otomatik yönlendirme: token varsa ve tab belirtilmemişse
+    if (token && user && !tab) {
+      // Kısa gecikme ile yönlendir (splash animasyonu görünsün)
+      setTimeout(() => {
+        window.location.href = user.role === 'parent' ? '/parent.html' : '/child.html';
+      }, 300);
+      return;
+    }
+
+    // Tab parametresi varsa otomatik yönlendir
+    if (tab === 'parent' || tab === 'child') {
+      setTimeout(() => goTo(tab), 200);
+    }
+  }, 1400);
+});
 </script>
 </body>
 </html>
