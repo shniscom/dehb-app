@@ -1817,62 +1817,108 @@ function renderActivityLog(activity) {
     return;
   }
 
-  const qualLabel = {great:'🌟 Çok İyi', good:'😊 İyi', ok:'🙂 Tamamlandı', late:'⏰ Geç'};
-  const statusLabel = {approved:'✅ Onaylandı', pending:'⏳ Bekliyor', rejected:'❌ Reddedildi'};
-  const statusColor = {approved:'var(--green)', pending:'var(--amber)', rejected:'var(--coral)'};
+  const qualLabel  = {great:'🌟 Çok İyi', good:'😊 İyi', ok:'🙂 Tamamlandı', late:'⏰ Geç'};
+  const statusColor= {approved:'var(--green)', pending:'var(--amber)', rejected:'var(--coral)',
+                      partial_pending:'var(--amber)', partial_approved:'var(--teal)'};
+  const statusLabel= {approved:'✅ Onaylandı', pending:'⏳ Bekliyor', rejected:'❌ Reddedildi',
+                      partial_pending:'⏳ Kısmi', partial_approved:'🔶 Kısmi Onay'};
 
   el.innerHTML = activity.map(day => `
     <div class="activity-day">
       <div class="activity-day-header">
         <span class="ad-date">${formatTRDate(day.date)}</span>
         <span class="ad-stats">
-          ✅ ${day.done_count} tamamlandı
+          ✅ ${day.done_count} onaylandı
           ${day.pending_count > 0 ? `· ⏳ ${day.pending_count} bekliyor` : ''}
           · <strong style="color:var(--amber)">+${day.total_pts} ⭐</strong>
         </span>
       </div>
-      ${day.completions.map(c => `
+
+      ${day.tasks.map(task => {
+        const allSubs    = task.all_subtasks || [];
+        const allDone    = task.all_done_subtasks || [];
+        const statusKey  = task.overall_status || 'pending';
+        const totalPts   = task.total_pts;
+
+        // Her alt görevin hangi completion'da, hangi saatte tamamlandığını bul
+        const subTimeMap = {};
+        task.completions.forEach(comp => {
+          comp.done_subtasks.forEach(s => {
+            if (!subTimeMap[s]) subTimeMap[s] = {
+              time: comp.completed_at_tr,
+              pts:  null, // altgörev başına puan hesaplanacak
+              status: comp.status,
+            };
+          });
+        });
+
+        // Alt görev puan dağılımı
+        const subCount  = allSubs.length;
+        const subPtsArr = subCount > 0
+          ? allSubs.map((_, i) => {
+              const base = Math.floor(task.pts_base / subCount);
+              const rem  = task.pts_base - base * subCount;
+              return i === subCount-1 ? base+rem : base;
+            })
+          : [];
+
+        return `
         <div class="activity-row" onclick="toggleActivityDetail(this)">
           <div class="ar-main">
-            <span class="ar-icon">${c.task_icon||'📋'}</span>
+            <span class="ar-icon">${task.task_icon||'📋'}</span>
             <div class="ar-info">
-              <div class="ar-title">${c.task_title}</div>
+              <div class="ar-title">${task.task_title}</div>
               <div class="ar-meta">
-                <span style="color:${statusColor[c.status]}">${statusLabel[c.status]||c.status}</span>
-                · ${c.completed_at_tr}
-                ${c.was_late ? '· ⏰ Geç' : ''}
+                <span style="color:${statusColor[statusKey]}">${statusLabel[statusKey]||statusKey}</span>
+                ${allSubs.length > 0 ? `· ${allDone.length}/${allSubs.length} alt görev (%${task.completion_rate})` : ''}
+                ${task.completions.length > 1 ? `· ${task.completions.length} oturum` : `· ${task.completions[0]?.completed_at_tr||''}`}
               </div>
             </div>
-            <div class="ar-pts" style="color:${c.pts_awarded>0?'var(--amber)':'var(--muted)'}">
-              ${c.pts_awarded > 0 ? '+'+c.pts_awarded : '—'} ⭐
+            <div class="ar-pts" style="color:${totalPts>0?'var(--amber)':'var(--muted)'}">
+              ${totalPts > 0 ? '+'+totalPts : '—'} ⭐
             </div>
             <span class="ar-toggle">▾</span>
           </div>
+
           <div class="ar-detail" style="display:none">
-            ${c.all_subtasks.length > 0 ? `
-              <div class="ar-section-label">Alt Görevler</div>
-              ${c.all_subtasks.map(s => `
+            ${allSubs.length > 0 ? `
+              <div class="ar-section-label">Alt Görev Detayları</div>
+              ${allSubs.map((s, i) => {
+                const info   = subTimeMap[s];
+                const isDone = !!info;
+                return `
                 <div class="ar-subtask">
-                  <span>${c.done_subtasks.includes(s) ? '✅' : '❌'}</span>
-                  <span style="${c.done_subtasks.includes(s)?'':'color:var(--muted);text-decoration:line-through'}">${s}</span>
-                </div>
-              `).join('')}
-              <div style="font-size:11px;color:var(--muted);margin-top:4px">
-                ${c.done_subtasks.length}/${c.all_subtasks.length} alt görev · %${c.completion_rate} tamamlama
-              </div>
+                  <span>${isDone ? (info.status==='approved'?'✅':'⏳') : '❌'}</span>
+                  <span style="${!isDone?'color:var(--muted);text-decoration:line-through':''}">${s}</span>
+                  ${isDone ? `
+                    <span style="margin-left:auto;font-size:10px;color:var(--muted)">
+                      ${info.time}
+                      · +${subPtsArr[i]||0} ⭐
+                    </span>` : `<span style="margin-left:auto;font-size:10px;color:var(--muted)">yapılmadı</span>`}
+                </div>`;
+              }).join('')}
             ` : ''}
-            ${c.quality ? `
-              <div class="ar-section-label" style="margin-top:8px">Değerlendirme</div>
-              <div style="font-size:12px">${qualLabel[c.quality]||c.quality}
-                ${c.behavior_bonus && c.behavior_bonus !== 0 ? `· Davranış: ${c.behavior_bonus>0?'+':''}${c.behavior_bonus} ⭐` : ''}
+
+            ${task.completions.map((comp, ci) => `
+              <div class="ar-section-label" style="margin-top:${ci===0&&allSubs.length===0?0:8}px">
+                ${task.completions.length > 1 ? `Oturum ${ci+1} — ` : ''}Değerlendirme
               </div>
-            ` : ''}
-            ${c.behavior_note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">📝 ${c.behavior_note}</div>` : ''}
-            ${c.parent_note  ? `<div style="font-size:11px;color:var(--purple);margin-top:4px;font-style:italic">💬 "${c.parent_note}"</div>` : ''}
-            ${c.approved_at_tr ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Onaylanma: ${c.approved_at_tr}</div>` : ''}
+              <div style="font-size:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                ${comp.quality ? `<span>${qualLabel[comp.quality]||comp.quality}</span>` : ''}
+                ${comp.pts_awarded > 0 ? `<span style="color:var(--amber);font-weight:800">+${comp.pts_awarded} ⭐</span>` : ''}
+                ${comp.behavior_bonus && comp.behavior_bonus !== 0
+                  ? `<span style="color:${comp.behavior_bonus>0?'var(--green)':'var(--coral)'}">
+                      Davranış: ${comp.behavior_bonus>0?'+':''}${comp.behavior_bonus} ⭐
+                    </span>` : ''}
+                ${comp.was_late ? `<span style="color:var(--coral)">⏰ Geç</span>` : ''}
+              </div>
+              ${comp.behavior_note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">📝 ${comp.behavior_note}</div>` : ''}
+              ${comp.parent_note  ? `<div style="font-size:11px;color:var(--purple);margin-top:4px;font-style:italic">💬 "${comp.parent_note}"</div>` : ''}
+              ${comp.approved_at_tr ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Onaylanma: ${comp.approved_at_tr}</div>` : ''}
+            `).join('')}
           </div>
-        </div>
-      `).join('')}
+        </div>`;
+      }).join('')}
     </div>
   `).join('');
 }
