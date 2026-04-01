@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Görev Kahramanı — Giriş</title>
+<meta name="theme-color" content="#7c5cbf">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GorevKahraman">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="/js/api.js"></script>
 <style>
@@ -187,6 +194,10 @@ function switchTab(tab) {
   document.getElementById('panel-parent').classList.toggle('active', tab==='parent');
   document.getElementById('panel-child').classList.toggle('active', tab==='child');
 }
+
+// URL'den tab parametresini oku
+const _urlTab = new URLSearchParams(window.location.search).get('tab');
+if (_urlTab === 'parent' || _urlTab === 'child') switchTab(_urlTab);
 
 async function parentLogin() {
   const email    = document.getElementById('email').value.trim();
