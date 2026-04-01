@@ -157,7 +157,7 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
         Oyuna Başla! 🚀
       </button>
     </div>
-    <div class="hint">Aile kodunu ebeveyninden öğren.<br>Demo kod: <strong>1</strong></div>
+    <div class="hint">Aile kodunu ebeveyninden öğren.<br>Demo kod: <strong>DEMO01</strong></div>
   </div>
 </div>
 
@@ -209,23 +209,23 @@ async function parentLogin() {
 }
 
 async function loadChildren() {
-  const familyId = document.getElementById('family-code').value.trim();
-  if (!familyId) { document.getElementById('children-area').style.display='none'; return; }
+  const code = document.getElementById('family-code').value.trim();
+  if (!code) { document.getElementById('children-area').style.display='none'; return; }
 
-  // Geçici token olmadan direkt endpoint çağrılamaz; aile ID'sini kullanarak
-  // açık bir endpoint üzerinden çocukları listeleriz (production'da rate-limit eklenebilir)
   try {
-    const res = await fetch(`/api/auth/children?family_id=${familyId}`);
-    if (!res.ok) throw new Error();
-    const children = await res.json();
-    renderChildren(children, familyId);
-  } catch {
+    // join_code veya sayısal family_id her ikisini de destekle
+    const data = await AuthAPI.children(code);
+    renderChildren(data.children || data, data.family_id || code);
+  } catch(e) {
     document.getElementById('children-area').style.display='none';
+    const err = document.getElementById('child-error');
+    err.textContent = e.message === 'Geçersiz aile kodu' ? 'Aile kodu bulunamadı' : '';
+    if (e.message) err.classList.add('show');
   }
 }
 
 function renderChildren(children, familyId) {
-  if (!children.length) return;
+  if (!children || !children.length) return;
   const grid = document.getElementById('child-grid');
   grid.innerHTML = children.map(c => `
     <div class="child-btn" onclick="selectChild(${c.id},${familyId},this)">
