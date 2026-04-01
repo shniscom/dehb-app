@@ -667,6 +667,22 @@ body {
 }
 .child-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* Pending task görsel */
+.task-card.pending-task {
+  opacity: 0.85;
+  border-color: rgba(255,179,71,0.3);
+  cursor: pointer !important;
+}
+.task-card.pending-task::before { background: var(--amber) !important; }
+
+/* Partial task - kısmi onaylandı, kalan var */
+.task-card.partial-task {
+  opacity: 0.9;
+  border-color: rgba(62,207,178,0.3);
+  cursor: pointer !important;
+}
+.task-card.partial-task::before { background: var(--teal) !important; }
+
 /* young mode tweaks */
 body.young .task-info h3 { font-size: 17px; }
 body.young .task-card { padding: 18px; }
@@ -965,33 +981,38 @@ function logout() {
 async function loadTasks() {
   try {
     const raw = await TasksAPI.today(currentUser.id);
-    tasks = raw.map(t => ({
-      id:           t.id,
-      title:        t.title,
-      sub:          catLabel(t.category) + ' · ' + recurLabel(t.recurrence),
-      icon:         t.icon || '📋',
-      cat:          t.category,
-      color:        CAT_COLORS[t.category] || 'purple',
-      pts:          t.pts_base,
-      bonusGreat:   t.pts_great,
-      bonusGood:    t.pts_good,
-      penaltyLate:  t.pts_late,
-      penaltySkip:  t.pts_skip,
-      duration:     t.duration_min,
-      subtasks:     Array.isArray(t.subtasks) ? t.subtasks : JSON.parse(t.subtasks||'[]'),
-      done:         t.completion?.status === 'approved',
-      pending:      t.completion?.status === 'pending',
-      comp_id:      t.completion?.id || null,
-      // Çocuğun daha önce tamamladığı alt görevler
-      subtasks_done: t.completion?.subtasks_done || [],
-    }));
+    tasks = raw.map(t => {
+      const comp = t.completion;
+      return {
+        id:            t.id,
+        title:         t.title,
+        sub:           catLabel(t.category) + ' · ' + recurLabel(t.recurrence),
+        icon:          t.icon || '📋',
+        cat:           t.category,
+        color:         CAT_COLORS[t.category] || 'purple',
+        pts:           t.pts_base,
+        bonusGreat:    t.pts_great,
+        bonusGood:     t.pts_good,
+        penaltyLate:   t.pts_late,
+        penaltySkip:   t.pts_skip,
+        duration:      t.duration_min,
+        subtasks:      Array.isArray(t.subtasks) ? t.subtasks : JSON.parse(t.subtasks||'[]'),
+        done:          comp?.status === 'approved',
+        pending:       comp?.status === 'pending',
+        partial:       comp?.status === 'partial',  // kısmi onaylandı, kalan var
+        comp_id:       comp?.id || null,
+        subtasks_done: comp?.subtasks_done || [],   // tüm tamamlananlar (approved+pending)
+        approved_done: comp?.approved_done  || [],  // sadece onaylananlar
+        pending_done:  comp?.pending_done   || [],  // bekleyenler
+      };
+    });
   } catch(e) {
     tasks = [];
   }
   renderTasks();
   updateProgress();
   updateStreak();
-  const remaining = tasks.filter(t=>!t.done).length;
+  const remaining = tasks.filter(t => !t.done && !t.pending && !t.partial).length;
   document.getElementById('greet-sub').textContent =
     remaining > 0 ? `Bugün ${remaining} görevin var` : 'Harika! Tüm görevler tamam 🎉';
 }
@@ -1084,29 +1105,50 @@ function renderTasks(cat='all') {
     const div = document.createElement('div');
     div.dataset.color = t.color;
 
-    if (t.done) {
-      // Onaylanmış — pasif, tıklanamaz
+    const subTotal    = t.subtasks?.length || 0;
+    const doneSubs    = t.subtasks_done || [];
+    const pendingSubs = t.pending_done  || [];
+    const approvedSubs= t.approved_done || [];
+    const subDone     = doneSubs.length;
+
+    if (t.done && subTotal > 0 && subDone < subTotal) {
+      // Hepsi onaylandı ama bazı alt görevler eksik kalmış — kalan yapılabilir
+      div.className = 'task-card partial-task';
+      div.onclick   = () => openTask(t);
+      div.title     = 'Kalan alt görevleri tamamlayabilirsin';
+    } else if (t.done) {
       div.className = 'task-card done';
       div.style.cursor = 'default';
+    } else if (t.partial) {
+      // Kısmi onay: bazıları onaylandı, kalan yapılabilir
+      div.className = 'task-card partial-task';
+      div.onclick   = () => openTask(t);
     } else if (t.pending) {
-      // Beklemede — tıklanabilir, özel badge, yarı saydam
+      // Onay bekliyor — kalan alt görevler için yine açılabilir
       div.className = 'task-card pending-task';
-      div.onclick = () => openTask(t);
-      div.title = 'Kalan alt görevleri tamamlayabilirsin';
+      div.onclick   = () => openTask(t);
     } else {
-      // Aktif
       div.className = 'task-card';
-      div.onclick = () => openTask(t);
+      div.onclick   = () => openTask(t);
     }
 
-    // Alt görev ilerleme bilgisi
-    const subTotal = t.subtasks?.length || 0;
-    const subDone  = t.subtasks_done?.length || 0;
-    const subInfo  = subTotal > 0
-      ? `<span style="font-size:10px;font-weight:700;color:${t.pending?'var(--amber)':'var(--muted)'}">
-           ${t.done ? '✅' : t.pending ? `⏳ ${subDone}/${subTotal} alt görev` : `${subTotal} adım`}
-         </span>`
-      : '';
+    // Alt görev ilerleme göstergesi
+    let subInfo = '';
+    if (subTotal > 0) {
+      if (t.done && subDone >= subTotal) {
+        subInfo = `<span style="font-size:10px;font-weight:700;color:var(--green)">✅ Tümü tamam</span>`;
+      } else if (subDone > 0) {
+        const approvedCount = approvedSubs.length;
+        const pendingCount  = pendingSubs.length;
+        subInfo = `<span style="font-size:10px;font-weight:700;color:var(--amber)">
+          ${approvedCount > 0 ? `✅${approvedCount}` : ''}
+          ${pendingCount  > 0 ? ` ⏳${pendingCount}` : ''}
+          /${subTotal} alt görev
+        </span>`;
+      } else {
+        subInfo = `<span style="font-size:10px;font-weight:700;color:var(--muted)">${subTotal} adım</span>`;
+      }
+    }
     div.innerHTML = `
       <div class="task-header">
         <div class="task-icon">${t.icon}</div>
@@ -1229,23 +1271,39 @@ function openTask(t) {
   document.getElementById('btn-start').textContent   = '▶  Başla';
   document.getElementById('btn-start').className     = 'btn-start';
 
-  // Subtask'lar — tamamlananlar pasif, kalanlar aktif
+  // Subtask'lar — approved pasif+yeşil, pending pasif+sarı, kalan aktif
+  const approvedSubs = t.approved_done || [];
+  const pendingSubs  = t.pending_done  || [];
+  const allDoneSubs  = t.subtasks_done || [];
+
   const sub = document.getElementById('m-subtasks');
   sub.innerHTML = allSubs.map((s, i) => {
-    const isDone = doneSubs.includes(s);
-    return `
-    <div class="subtask-item${isDone?' done':''}" id="sub-${t.id}-${i}"
-      ${isDone ? '' : `onclick="toggleSubtask(${t.id},${i})"`}
-      style="${isDone ? 'opacity:0.5;cursor:default;' : 'cursor:pointer'}">
-      <div class="subtask-check" style="${isDone?'background:var(--green);border-color:var(--green);':''}">
-        ${isDone?'✓':''}
-      </div>
-      <span class="subtask-text">${s}</span>
-      ${isDone
-        ? '<span style="font-size:10px;color:var(--green);margin-left:auto;font-weight:700">✅ Yapıldı</span>'
-        : '<span style="font-size:10px;color:var(--muted);margin-left:auto;font-weight:700">yapılacak</span>'
-      }
-    </div>`;
+    const isApproved = approvedSubs.includes(s);
+    const isPending  = pendingSubs.includes(s) && !isApproved;
+    const isActive   = !isApproved && !isPending;
+
+    if (isApproved) {
+      return `
+      <div class="subtask-item done" style="opacity:0.6;cursor:default">
+        <div class="subtask-check" style="background:var(--green);border-color:var(--green);color:white">✓</div>
+        <span class="subtask-text" style="text-decoration:line-through">${s}</span>
+        <span style="font-size:10px;color:var(--green);margin-left:auto;font-weight:700">✅ Onaylandı</span>
+      </div>`;
+    } else if (isPending) {
+      return `
+      <div class="subtask-item" style="opacity:0.7;cursor:default">
+        <div class="subtask-check" style="background:rgba(255,179,71,0.3);border-color:var(--amber);color:var(--amber)">⏳</div>
+        <span class="subtask-text">${s}</span>
+        <span style="font-size:10px;color:var(--amber);margin-left:auto;font-weight:700">⏳ Onay bekliyor</span>
+      </div>`;
+    } else {
+      return `
+      <div class="subtask-item" id="sub-${t.id}-${i}" onclick="toggleSubtask(${t.id},${i})" style="cursor:pointer">
+        <div class="subtask-check"></div>
+        <span class="subtask-text">${s}</span>
+        <span style="font-size:10px;color:var(--muted);margin-left:auto;font-weight:700">yapılacak</span>
+      </div>`;
+    }
   }).join('');
 
   openModal('task-modal');
@@ -1408,17 +1466,13 @@ async function confirmCompletion() {
     SoundEngine.play('fanfare');
     updatePointsDisplay();
   } catch(e) {
-    // Aynı görev bugün zaten tamamlandıysa
-    if (e.message && e.message.includes('zaten')) {
-      showToast('⏳', 'Bu görev zaten ebeveyn onayı bekliyor!');
+    if (e.message?.includes('zaten') || e.message?.includes('onay bekliyor')) {
+      showToast('⏳', 'Seçtiğin alt görevler zaten gönderildi!');
     } else {
       showToast('❌', e.message || 'Görev gönderilemedi');
     }
-    // Görevi pending olarak işaretle (yerel state güncelle)
-    if (currentTask) {
-      const t = tasks.find(x => x.id === currentTask.id);
-      if (t) { t.pending = true; renderTasks(); updateProgress(); }
-    }
+    // Görevi güncel duruma göre yenile
+    await loadTasks();
   }
 }
 
