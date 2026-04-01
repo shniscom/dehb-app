@@ -901,6 +901,9 @@ body.young .reward-card { width: 140px; }
   </div>
 </div>
 
+<!-- Aktif görev barı - timer çalışırken görünür -->
+<div id="active-task-bar" style="display:none;position:fixed;bottom:72px;left:0;right:0;z-index:49;background:linear-gradient(135deg,rgba(124,92,191,0.95),rgba(62,207,178,0.95));backdrop-filter:blur(12px);padding:10px 16px;display:none;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,0.3)"></div>
+
 <!-- Toast -->
 <div class="child-toast" id="child-toast">
   <span id="child-toast-icon">✅</span>
@@ -1328,7 +1331,9 @@ function toggleTimer() {
   if (!timerRunning) {
     startTimer();
   } else {
+    // Bitti tıklandı
     stopTimer();
+    hideActiveTaskBar();
     closeModal('task-modal');
     setTimeout(()=>openQuality(), 200);
   }
@@ -1344,18 +1349,57 @@ function startTimer() {
     if (timerSeconds <= 0) {
       timerSeconds = 0;
       stopTimer();
+      hideActiveTaskBar();
       document.getElementById('timer-label').textContent = 'Süre doldu!';
       document.getElementById('btn-start').textContent   = '⏰  Geç Bitti!';
       document.getElementById('btn-start').className     = 'btn-start';
+      // Süre dolunca modal açıksa kalsın, kapalıysa tekrar aç
+      if (!document.getElementById('task-modal').classList.contains('open')) {
+        openModal('task-modal');
+      }
     }
     updateTimerDisplay();
     updateTimerRing(timerSeconds/timerTotal);
+    renderActiveTaskBar(); // Arka planda bar güncelle
   }, 1000);
 }
 
 function stopTimer() {
   clearInterval(timerInterval);
   timerRunning = false;
+}
+
+// ── AKTİF GÖREV BARI ──
+function renderActiveTaskBar() {
+  const bar = document.getElementById('active-task-bar');
+  if (!bar || !currentTask || !timerRunning) return;
+  const m = Math.floor(timerSeconds/60);
+  const s = timerSeconds % 60;
+  const pct = timerTotal > 0 ? Math.round((1 - timerSeconds/timerTotal)*100) : 0;
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    <span style="font-size:20px">${currentTask.icon}</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${currentTask.title}</div>
+      <div style="height:4px;background:rgba(255,255,255,0.15);border-radius:4px;margin-top:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:var(--teal);border-radius:4px;transition:width .5s"></div>
+      </div>
+    </div>
+    <div style="text-align:right;flex-shrink:0">
+      <div style="font-size:16px;font-weight:900;color:var(--amber);font-variant-numeric:tabular-nums">
+        ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}
+      </div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.5)">⏱ devam ediyor</div>
+    </div>
+    <button onclick="openModal('task-modal')" style="background:rgba(255,255,255,0.1);border:none;border-radius:10px;color:white;font-size:11px;font-weight:700;padding:6px 10px;cursor:pointer;font-family:inherit;flex-shrink:0">
+      Geri Dön
+    </button>
+  `;
+}
+
+function hideActiveTaskBar() {
+  const bar = document.getElementById('active-task-bar');
+  if (bar) bar.style.display = 'none';
 }
 
 function updateTimerDisplay() {
@@ -1547,7 +1591,12 @@ function setAge(mode) {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
-  if(id==='task-modal') stopTimer();
+  // task-modal kapanınca timer DURMUYOR — arka planda devam ediyor
+  // Sadece overlay backdrop tıklandığında da kalite ekranı açılsın
+  if (id === 'task-modal' && timerRunning) {
+    // Timer çalışıyorken modal kapandı → bildirim barında göster
+    renderActiveTaskBar();
+  }
 }
 
 // ── TOAST ──
