@@ -584,21 +584,8 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
     <div class="logo-text">Görev Kahramanı <span>Ebeveyn Paneli</span></div>
   </div>
 
-  <div class="child-switcher">
-    <div class="child-card active" onclick="selectChild(0)">
-      <div class="child-avatar">🦸</div>
-      <div class="child-info">
-        <div class="ci-name">Ali (9 yaş)</div>
-        <div class="ci-pts" id="child0-pts">⭐ 145 puan</div>
-      </div>
-    </div>
-    <div class="child-card" onclick="selectChild(1)">
-      <div class="child-avatar" style="background:linear-gradient(135deg,#ff6b6b,#ffb347)">🦋</div>
-      <div class="child-info">
-        <div class="ci-name">Ayşe (7 yaş)</div>
-        <div class="ci-pts">⭐ 210 puan</div>
-      </div>
-    </div>
+  <div class="child-switcher" id="sidebar-child-switcher">
+    <!-- API'den yüklenir -->
   </div>
 
   <div class="nav-section">
@@ -2043,7 +2030,7 @@ async function confirmDeleteChild() {
   }
 }
 
-async async function regenerateCode() {
+async function regenerateCode() {
   if (!confirm('Yeni rastgele kod oluşturulsun mu? Eski kod geçersiz kalır.')) return;
   try {
     const res = await FamilyAPI.regenerateCode();
@@ -2062,6 +2049,8 @@ async function setCustomCode() {
     showToast('✅', `Aile kodu güncellendi: ${res.join_code}`);
   } catch(e) { showToast('❌', e.message||'Kod güncellenemedi'); }
 }
+
+async function openResetModal(id, name) {
   if (!confirm(`"${name}" için tüm puanlar sıfırlansın mı? Bu işlem geri alınamaz.`)) return;
   try {
     await FamilyAPI.resetPoints(id);
@@ -2097,11 +2086,11 @@ async function applyManualPoints() {
 }
 
 function updateSidebarChildren() {
-  const switcher = document.querySelector('.child-switcher');
+  const switcher = document.getElementById('sidebar-child-switcher');
   if (!switcher) return;
-  if (!childrenData.length) { switcher.innerHTML = ''; return; }
+  if (!childrenData.length) { switcher.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px 10px">Çocuk profili yok</div>'; return; }
   switcher.innerHTML = childrenData.map((c,i) => `
-    <div class="child-card${i===0?' active':''}" onclick="selectChildById(${c.id},this)">
+    <div class="child-card${c.id===currentChildId?' active':''}" onclick="selectChildById(${c.id},this)">
       <div class="child-avatar">${c.avatar||'🦸'}</div>
       <div class="child-info">
         <div class="ci-name">${c.name}</div>
