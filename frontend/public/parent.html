@@ -933,7 +933,8 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
       <div style="display:flex;align-items:center;gap:8px">
         <label style="font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap">Özel değer:</label>
         <input class="form-input" id="behavior-bonus-input" type="number" value="0" min="-5" max="10"
-          style="max-width:80px" oninput="clearBehaviorPresets()">
+          style="max-width:80px"
+          oninput="clearBehaviorPresets(); const a=pendingList.find(x=>x.id===editingApprovalId); if(a) updateBonusPreview(a);">
         <span style="font-size:12px;color:var(--muted)" id="behavior-bonus-label">puan</span>
       </div>
     </div>
@@ -1215,21 +1216,34 @@ function clearBehaviorPresets() {
   document.querySelectorAll('.behavior-preset').forEach(b=>b.classList.remove('active'));
 }
 
+function calcSubtaskEarnedParent(totalPts, allSubs, doneSubs) {
+  if (!allSubs || allSubs.length === 0) return totalPts;
+  const count = allSubs.length;
+  const base = Math.floor(totalPts / count);
+  const rem  = totalPts - base * count;
+  const pts  = allSubs.map((_, i) => i === count-1 ? base+rem : base);
+  return allSubs.reduce((sum, s, i) => doneSubs.includes(s) ? sum+pts[i] : sum, 0);
+}
+
 function updateBonusPreview(a) {
   const quality = document.getElementById('edit-quality').value;
   const bonus   = parseInt(document.getElementById('behavior-bonus-input').value) || 0;
-
-  // Puan tahmini hesapla
-  const baseMap = { great: (a.pts_base||10)+(a.pts_great||5), good: (a.pts_base||10)+(a.pts_good||3),
-                    ok: (a.pts_base||10), late: Math.max(0,(a.pts_base||10)+(a.pts_late||-3)) };
-  const basePts = baseMap[quality] || (a.pts_base||10);
-  const maxPenalty = Math.round((a.pts_base||10)*0.3);
-  const safeBonus  = Math.max(-maxPenalty, Math.min(Math.round((a.pts_base||10)*0.5), bonus));
-  const total = Math.max(0, basePts + safeBonus);
-
+  const items   = document.querySelectorAll('#subtask-check-list [data-subtask]');
+  const doneSubs = items.length > 0
+    ? Array.from(items).filter(el=>el.querySelector('div').style.background.includes('green')).map(el=>el.dataset.subtask)
+    : (a.subtasks_done || []);
+  const allSubs  = a.subtasks || [];
+  const pts_base = a.pts_base || 10;
+  const ratio    = allSubs.length > 0 ? doneSubs.length/allSubs.length : 1;
+  const basePts  = calcSubtaskEarnedParent(pts_base, allSubs, doneSubs);
+  const qBonus   = {great:Math.round((a.pts_great||0)*ratio),good:Math.round((a.pts_good||0)*ratio),ok:0,late:Math.round((a.pts_late||0)*ratio)};
+  const maxPenalty = Math.round(pts_base*0.3);
+  const safeBonus  = Math.max(-maxPenalty, Math.min(Math.round(pts_base*0.5), bonus));
+  const total = Math.max(0, basePts + (qBonus[quality]||0) + safeBonus);
+  const subInfo = allSubs.length > 0 ? ` (${doneSubs.length}/${allSubs.length} alt gorev)` : "";
   const el = document.getElementById('edit-pts-preview');
-  el.innerHTML = `Verilecek puan: <span style="color:var(--amber);font-size:16px">${total} ⭐</span>` +
-    (safeBonus !== 0 ? ` <span style="color:${safeBonus>0?'var(--green)':'var(--coral)'};">(${safeBonus>0?'+':''}${safeBonus} davranış)</span>` : '');
+  el.innerHTML = `Verilecek puan: <span style="color:var(--amber);font-size:16px">${total} ⭐</span>` + subInfo
+    + (safeBonus!==0 ? ` <span style="color:${safeBonus>0?'var(--green)':'var(--coral)'};">(${safeBonus>0?'+':''}${safeBonus} davranis)</span>` : '');
 }
 
 async function saveEditedApproval() {
