@@ -34,7 +34,19 @@ router.put('/code', (req, res) => {
   res.json({ join_code: clean });
 });
 
-// ── EBEVEYN PROFİL GÜNCELLEME ──
+// GET /api/family/children/:id/active — çocuğun aktif (bugün pending) görevleri
+router.get('/children/:id/active', (req, res) => {
+  const today = new Date().toISOString().split('T')[0];
+  const rows = db.prepare(`
+    SELECT c.id, c.task_id, c.status, c.quality, c.completed_at,
+           t.title, t.icon, t.category, t.duration_min, t.pts_base
+    FROM completions c
+    JOIN tasks t ON t.id = c.task_id
+    WHERE c.child_id = ? AND c.due_date = ? AND c.status = 'pending'
+    ORDER BY c.completed_at DESC
+  `).all(req.params.id, today);
+  res.json(rows);
+});
 
 // PUT /api/family/parent/profile
 router.put('/parent/profile', (req, res) => {
