@@ -1,13 +1,24 @@
 // routes/reports.js
 const express = require('express');
 const db      = require('../db');
-const { authMiddleware, parentOnly } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 
-const router  = express.Router();
-router.use(authMiddleware, parentOnly);
+const router = express.Router();
+router.use(authMiddleware);
+
+// Yardımcı: childId'ye erişim yetkisi var mı?
+// Ebeveyn aynı ailedeki herkese, çocuk sadece kendine erişebilir
+function canAccessChild(req, childId) {
+  if (req.user.role === 'parent') {
+    const child = db.prepare('SELECT id FROM users WHERE id=? AND family_id=?').get(childId, req.user.family_id);
+    return !!child;
+  }
+  return parseInt(req.user.id) === parseInt(childId);
+}
 
 // GET /api/reports/weekly/:childId
 router.get('/weekly/:childId', (req, res) => {
+  if (!canAccessChild(req, req.params.childId)) return res.status(403).json({ error: 'Erişim reddedildi' });
   const { childId } = req.params;
   const today = new Date();
 
@@ -48,6 +59,7 @@ router.get('/weekly/:childId', (req, res) => {
 
 // GET /api/reports/category/:childId
 router.get('/category/:childId', (req, res) => {
+  if (!canAccessChild(req, req.params.childId)) return res.status(403).json({ error: 'Erişim reddedildi' });
   const cats = db.prepare(`
     SELECT t.category,
       COUNT(*) as total,
@@ -63,6 +75,7 @@ router.get('/category/:childId', (req, res) => {
 
 // GET /api/reports/streak/:childId
 router.get('/streak/:childId', (req, res) => {
+  if (!canAccessChild(req, req.params.childId)) return res.status(403).json({ error: 'Erişim reddedildi' });
   const { childId } = req.params;
   const days = 30;
   const rows = db.prepare(`
@@ -91,8 +104,9 @@ router.get('/streak/:childId', (req, res) => {
   res.json({ streak, current_streak: current });
 });
 
-// GET /api/reports/summary/:childId  — klinik özet
+// GET /api/reports/summary/:childId
 router.get('/summary/:childId', (req, res) => {
+  if (!canAccessChild(req, req.params.childId)) return res.status(403).json({ error: 'Erişim reddedildi' });
   const { childId } = req.params;
 
   const overall = db.prepare(`
