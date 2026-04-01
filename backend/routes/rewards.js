@@ -53,7 +53,29 @@ router.post('/:id/claim', (req, res) => {
   res.status(201).json({id:result.lastInsertRowid, status:'pending'});
 });
 
-// GET /api/rewards/claims/pending — ebeveyn: bekleyen ödül talepleri
+// POST /api/rewards/:id/give/:childId — ebeveyn direkt ödül verir (claim olmadan)
+router.post('/:id/give/:childId', parentOnly, (req, res) => {
+  const reward = db.prepare('SELECT * FROM rewards WHERE id=? AND family_id=? AND is_active=1')
+    .get(req.params.id, req.user.family_id);
+  if (!reward) return res.status(404).json({error:'Ödül bulunamadı'});
+
+  const child = db.prepare("SELECT * FROM users WHERE id=? AND family_id=? AND role='child'")
+    .get(req.params.childId, req.user.family_id);
+  if (!child) return res.status(404).json({error:'Çocuk bulunamadı'});
+
+  db.transaction(()=>{
+    // Direkt puan düş
+    db.prepare(`INSERT INTO point_ledger (child_id,delta,reason,source_type,source_id) VALUES (?,?,?,'reward',?)`)
+      .run(child.id, -reward.pts_required, `Ödül verildi: ${reward.title}`, reward.id);
+    const total = calcTotal(db, child.id);
+    db.prepare('UPDATE users SET total_points=? WHERE id=?').run(total, child.id);
+    // Stok düş
+    db.prepare("UPDATE rewards SET stock=CASE WHEN stock>0 THEN stock-1 ELSE stock END WHERE id=?")
+      .run(reward.id);
+  })();
+
+  res.json({ok:true, new_total: calcTotal(db, req.params.childId)});
+});
 router.get('/claims/pending', parentOnly, (req, res) => {
   const claims = db.prepare(`
     SELECT rc.*, r.title, r.icon, r.pts_required,
