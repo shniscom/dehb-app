@@ -1,0 +1,43 @@
+{
+  "name": "Görev Kahramanı",
+  "short_name": "GörevKahraman",
+  "description": "DEHB Görev & Puan Takip Sistemi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0e17",
+  "theme_color": "#7c5cbf",
+  "lang": "tr",
+  "categories": ["education", "health", "kids"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ebeveyn Girişi",
+      "short_name": "Ebeveyn",
+      "url": "/login.html?tab=parent",
+      "description": "Ebeveyn paneline git"
+    },
+    {
+      "name": "Çocuk Girişi",
+      "short_name": "Çocuk",
+      "url": "/login.html?tab=child",
+      "description": "Çocuk profiline git"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
