@@ -59,11 +59,15 @@ router.get('/me', authMiddleware, (req, res) => {
   res.json(user);
 });
 
-// GET /api/auth/children  (ebeveyn: aynı aile çocuklarını listele)
-router.get('/children', authMiddleware, (req, res) => {
+// GET /api/auth/children?family_id=1  — token gerektirmez, sadece family_id ile çocukları listele
+router.get('/children', (req, res) => {
+  const family_id = req.query.family_id;
+  if (!family_id) return res.status(400).json({ error: 'family_id gerekli' });
+
   const children = db.prepare(
-    "SELECT id,name,avatar,age_group,total_points FROM users WHERE family_id=? AND role='child'"
-  ).all(req.user.family_id);
+    "SELECT id,name,avatar,age_group,total_points FROM users WHERE family_id=? AND role='child' ORDER BY id"
+  ).all(family_id);
+
   res.json(children);
 });
 
