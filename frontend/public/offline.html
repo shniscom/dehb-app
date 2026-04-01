@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Görev Kahramanı — Çevrimdışı</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  background: #0f0e17; color: #f2f0ff;
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; padding: 24px; text-align: center;
+}
+.icon { font-size: 64px; margin-bottom: 8px; }
+h1 { font-size: 22px; font-weight: 800; color: #a87fff; }
+p  { font-size: 14px; color: rgba(242,240,255,0.6); line-height: 1.6; max-width: 280px; }
+button {
+  margin-top: 8px;
+  padding: 12px 28px;
+  border-radius: 24px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #7c5cbf, #3ecfb2);
+  color: white; font-size: 15px; font-weight: 800;
+  font-family: inherit;
+}
+button:active { transform: scale(0.97); }
+</style>
+</head>
+<body>
+<div class="icon">📡</div>
+<h1>İnternet Bağlantısı Yok</h1>
+<p>Görev Kahramanı'na erişmek için internet bağlantısı gerekiyor. Bağlantını kontrol et ve tekrar dene.</p>
+<button onclick="window.location.reload()">🔄 Tekrar Dene</button>
+</body>
+</html>
