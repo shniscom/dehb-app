@@ -695,6 +695,42 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
 }
 .behavior-preset:hover { border-color: var(--purple); color: var(--purple); }
 .behavior-preset.active { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); }
+
+/* ── CANLI İZLEME ── */
+.live-task-card {
+  background: var(--surface);
+  border: 1.5px solid rgba(255,107,107,0.3);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.live-task-card:hover { border-color: rgba(255,107,107,0.6); }
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--coral); flex-shrink: 0;
+  animation: pulse-live 1.4s ease-in-out infinite;
+}
+@keyframes pulse-live {
+  0%,100%{ transform:scale(1); opacity:1; box-shadow:0 0 0 0 rgba(255,107,107,0.4); }
+  50%{ transform:scale(1.2); opacity:0.8; box-shadow:0 0 0 6px rgba(255,107,107,0); }
+}
+.live-task-icon { font-size: 24px; flex-shrink: 0; }
+.live-task-info { flex: 1; min-width: 0; }
+.live-task-info h4 { font-size: 14px; font-weight: 800; margin-bottom: 3px; }
+.live-task-info p  { font-size: 11px; color: var(--muted); font-weight: 600; }
+.live-task-timer {
+  text-align: right; flex-shrink: 0;
+}
+.live-task-timer .lt-time {
+  font-size: 20px; font-weight: 900; color: var(--amber);
+  font-variant-numeric: tabular-nums; display: block;
+}
+.live-task-timer .lt-label {
+  font-size: 10px; color: var(--muted); font-weight: 700;
+}
 </style>
 <script src="/js/api.js"></script>
 </head>
@@ -718,7 +754,7 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
     </div>
     <div class="nav-item" onclick="showPage('approvals')">
       <span class="ni-icon">✅</span> Onaylar
-      <span class="nav-badge" id="approval-badge">2</span>
+      <span class="nav-badge" id="approval-badge" style="display:none"></span>
     </div>
     <div class="nav-item" onclick="showPage('tasks')">
       <span class="ni-icon">📋</span> Görevler
@@ -800,10 +836,19 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
 
       <div class="section-header">
         <h2>Bekleyen Onaylar</h2>
-        <span class="sh-count" id="dash-pending-count">2 bekliyor</span>
+        <span class="sh-count" id="dash-pending-count">yükleniyor...</span>
         <button class="btn btn-ghost btn-sm" onclick="showPage('approvals')">Tümünü Gör →</button>
       </div>
       <div class="pending-grid" id="dash-approvals"></div>
+
+      <!-- Canlı Görev İzleme -->
+      <div id="live-task-section" style="display:none;margin-top:4px">
+        <div class="section-header">
+          <h2>🔴 Canlı — Şu An Ne Yapıyor?</h2>
+          <span style="font-size:11px;color:var(--muted);font-weight:600" id="live-update-time"></span>
+        </div>
+        <div id="live-task-cards"></div>
+      </div>
 
       <div class="section-header" style="margin-top:12px">
         <h2>Haftalık Özet Grafiği</h2>
@@ -817,7 +862,7 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
     <div class="page" id="page-approvals">
       <div class="section-header">
         <h2>Onay Bekleyen Görevler</h2>
-        <span class="sh-count" id="appr-count">2 bekliyor</span>
+        <span class="sh-count" id="appr-count">yükleniyor...</span>
       </div>
       <div class="pending-grid" id="full-approvals"></div>
     </div>
@@ -1165,6 +1210,7 @@ function showPage(id) {
   document.getElementById('page-title').textContent = titles[id]||id;
   currentPage = id;
   if(id==='dashboard') renderDashboard();
+  else stopLivePolling();
   if(id==='approvals') loadAndRenderApprovals();
   if(id==='tasks')     loadAndRenderTasks();
   if(id==='calendar')  renderCalendar();
@@ -1175,6 +1221,8 @@ function showPage(id) {
 }
 
 // ── DASHBOARD ──
+let livePollingInterval = null;
+
 async function renderDashboard() {
   if (!currentChildId && childrenData.length) {
     currentChildId  = childrenData[0].id;
@@ -1214,7 +1262,6 @@ async function renderDashboard() {
         currentChildPts = summary.child.total_points || currentChildPts;
       }
 
-      // Streak
       const streakData = await ReportsAPI.streak(currentChildId).catch(()=>({current_streak:0}));
       document.getElementById('dash-stat-streak').textContent = `${streakData.current_streak||0} 🔥`;
 
@@ -1224,6 +1271,77 @@ async function renderDashboard() {
       document.getElementById('dash-bar-chart').innerHTML =
         '<p style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Henüz veri yok</p>';
     }
+  }
+
+  // Canlı izleme başlat (10 sn polling)
+  startLivePolling();
+}
+
+async function loadLiveActivity() {
+  if (!currentChildId) return;
+  try {
+    const active = await FamilyAPI.activeChild(currentChildId);
+    const section = document.getElementById('live-task-section');
+    const cards   = document.getElementById('live-task-cards');
+    const timeEl  = document.getElementById('live-update-time');
+
+    if (!active || active.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+    const now = new Date();
+    timeEl.textContent = `Son güncelleme: ${String(now.getHours()+3>23?(now.getHours()+3-24):now.getHours()+3).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    cards.innerHTML = active.map(item => {
+      // Ne zaman başladı — completed_at pending'e gönderilme zamanı
+      const sentAt    = new Date(item.completed_at);
+      const elapsed   = Math.floor((Date.now() - sentAt.getTime()) / 1000);
+      const totalSec  = (item.duration_min || 15) * 60;
+      const remaining = Math.max(0, totalSec - elapsed);
+      const rm = Math.floor(remaining/60);
+      const rs = remaining % 60;
+      const pct = Math.min(100, Math.round((elapsed/totalSec)*100));
+
+      return `
+      <div class="live-task-card" onclick="showPage('approvals')">
+        <div class="live-dot"></div>
+        <div class="live-task-icon">${item.icon||'📋'}</div>
+        <div class="live-task-info">
+          <h4>${item.title}</h4>
+          <div style="height:4px;background:var(--surface2);border-radius:4px;margin-top:4px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--purple-light),var(--teal));border-radius:4px;transition:width .5s"></div>
+          </div>
+          <p style="margin-top:4px">%${pct} tamamlandı · Onay bekliyor</p>
+        </div>
+        <div class="live-task-timer">
+          <span class="lt-time">${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}</span>
+          <span class="lt-label">kalan süre</span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('live-task-section').style.display = 'none';
+  }
+}
+
+function startLivePolling() {
+  // Önceki polling varsa durdur
+  if (livePollingInterval) clearInterval(livePollingInterval);
+  // Hemen çalıştır
+  loadLiveActivity();
+  // 10 sn'de bir güncelle
+  livePollingInterval = setInterval(() => {
+    if (currentPage === 'dashboard') loadLiveActivity();
+    else stopLivePolling();
+  }, 10000);
+}
+
+function stopLivePolling() {
+  if (livePollingInterval) {
+    clearInterval(livePollingInterval);
+    livePollingInterval = null;
   }
 }
 
@@ -1451,10 +1569,18 @@ async function saveEditedApproval() {
 function updateBadge() {
   const cnt = pendingList.length;
   const badge = document.getElementById('approval-badge');
-  badge.textContent = cnt||'';
-  badge.style.display = cnt ? '' : 'none';
-  const el = document.getElementById('dash-pending-count');
-  if (el) el.textContent = cnt+' bekliyor';
+  if (badge) {
+    badge.textContent = cnt || '';
+    badge.style.display = cnt ? '' : 'none';
+  }
+  const dashEl = document.getElementById('dash-pending-count');
+  if (dashEl) dashEl.textContent = cnt + ' bekliyor';
+  // Mobil badge
+  const mbnBadge = document.getElementById('mbn-badge');
+  if (mbnBadge) {
+    mbnBadge.textContent = cnt || '';
+    mbnBadge.style.display = cnt ? 'flex' : 'none';
+  }
 }
 
 // ── TASK TABLE ──
@@ -2654,19 +2780,12 @@ function updateMobileBadge(count) {
   }
 }
 
-// updateBadge'e mobil badge'i de ekle
-const _origUpdateBadge = updateBadge;
-function updateBadge() {
-  _origUpdateBadge();
-  const cnt = pendingList.length;
-  updateMobileBadge(cnt);
-}
-
 // Sidebar nav tıklanınca mobil menüyü kapat
-document.querySelectorAll('.nav-item').forEach(item => {
-  const orig = item.onclick;
-  item.addEventListener('click', () => {
-    if (window.innerWidth <= 900) closeMobileMenu();
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (window.innerWidth <= 900) closeMobileMenu();
+    });
   });
 });
 (async () => {
