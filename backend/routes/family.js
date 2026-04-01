@@ -7,6 +7,33 @@ const { authMiddleware, parentOnly } = require('../middleware/auth');
 const router = express.Router();
 router.use(authMiddleware, parentOnly);
 
+// GET /api/family/code — ailenin join_code'unu getir
+router.get('/code', (req, res) => {
+  const fam = db.prepare('SELECT join_code FROM families WHERE id=?').get(req.user.family_id);
+  res.json({ join_code: fam?.join_code || null });
+});
+
+// POST /api/family/code/regenerate — yeni kod üret
+router.post('/code/regenerate', (req, res) => {
+  const newCode = Math.random().toString(36).slice(2,8).toUpperCase();
+  db.prepare('UPDATE families SET join_code=? WHERE id=?').run(newCode, req.user.family_id);
+  res.json({ join_code: newCode });
+});
+
+// PUT /api/family/code — özel kod belirle
+router.put('/code', (req, res) => {
+  const { code } = req.body;
+  if (!code || code.length < 4 || code.length > 12)
+    return res.status(400).json({ error: 'Kod 4-12 karakter olmalı' });
+  const clean = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (clean.length < 4) return res.status(400).json({ error: 'Sadece harf ve rakam kullanın' });
+  // Başka aile bu kodu kullanıyor mu?
+  const existing = db.prepare('SELECT id FROM families WHERE join_code=? AND id!=?').get(clean, req.user.family_id);
+  if (existing) return res.status(409).json({ error: 'Bu kod başka bir aile tarafından kullanılıyor' });
+  db.prepare('UPDATE families SET join_code=? WHERE id=?').run(clean, req.user.family_id);
+  res.json({ join_code: clean });
+});
+
 // ── EBEVEYN PROFİL GÜNCELLEME ──
 
 // PUT /api/family/parent/profile
