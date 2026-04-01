@@ -59,16 +59,23 @@ router.get('/me', authMiddleware, (req, res) => {
   res.json(user);
 });
 
-// GET /api/auth/children?family_id=1  — token gerektirmez, sadece family_id ile çocukları listele
+// GET /api/auth/children?join_code=DEMO01 veya ?family_id=1
 router.get('/children', (req, res) => {
-  const family_id = req.query.family_id;
-  if (!family_id) return res.status(400).json({ error: 'family_id gerekli' });
+  let family_id = req.query.family_id;
+
+  if (!family_id && req.query.join_code) {
+    const fam = db.prepare('SELECT id FROM families WHERE join_code=?').get(req.query.join_code.toUpperCase());
+    if (!fam) return res.status(404).json({ error: 'Geçersiz aile kodu' });
+    family_id = fam.id;
+  }
+
+  if (!family_id) return res.status(400).json({ error: 'family_id veya join_code gerekli' });
 
   const children = db.prepare(
     "SELECT id,name,avatar,age_group,total_points FROM users WHERE family_id=? AND role='child' ORDER BY id"
   ).all(family_id);
 
-  res.json(children);
+  res.json({ children, family_id: parseInt(family_id) });
 });
 
 module.exports = router;
