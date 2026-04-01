@@ -50,6 +50,7 @@ const FamilyAPI = {
   resetPoints:    (id)     => post(`/family/children/${id}/reset-points`),
   childStats:     (id)     => get(`/family/children/${id}/stats`),
   manualPoints:   (id, delta, reason) => post(`/family/children/${id}/points`, { delta, reason }),
+  activeChild:    (id)     => get(`/family/children/${id}/active`),
   // Aile kodu
   getCode:        ()       => get('/family/code'),
   regenerateCode: ()       => post('/family/code/regenerate'),
