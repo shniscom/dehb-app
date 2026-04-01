@@ -21,6 +21,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS families (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT NOT NULL,
+    join_code   TEXT UNIQUE,           -- çocuk giriş kodu (6 haneli alfanümerik)
     created_at  TEXT DEFAULT (datetime('now'))
   );
 
@@ -69,6 +70,9 @@ db.exec(`
     quality         TEXT CHECK(quality IN ('great','good','ok','late')),
     was_late        INTEGER DEFAULT 0,
     pts_awarded     INTEGER DEFAULT 0,
+    subtasks_done   TEXT DEFAULT '[]',  -- çocuğun işaretlediği alt görevler (JSON array)
+    behavior_bonus  INTEGER DEFAULT 0,  -- ebeveyn davranış bonusu (+/-)
+    behavior_note   TEXT,               -- ebeveyn davranış notu
     photo_url       TEXT,
     parent_note     TEXT,
     completed_at    TEXT DEFAULT (datetime('now')),
@@ -121,8 +125,8 @@ db.exec(`
 // ── ÖRNEK VERİ (ilk kurulumda) ──
 const seedCheck = db.prepare('SELECT COUNT(*) as cnt FROM families').get();
 if (seedCheck.cnt === 0) {
-  const insertFamily = db.prepare('INSERT INTO families (name) VALUES (?)');
-  const fam = insertFamily.run('Demo Aile');
+  const insertFamily = db.prepare('INSERT INTO families (name, join_code) VALUES (?,?)');
+  const fam = insertFamily.run('Demo Aile', 'DEMO01');
 
   const bcrypt = require('bcryptjs');
   const hash = bcrypt.hashSync('demo123', 10);
@@ -161,5 +165,18 @@ if (seedCheck.cnt === 0) {
   console.log('✅ Demo verisi oluşturuldu.');
   console.log('   Giriş: ebeveyn@demo.com / demo123');
 }
+
+// ── MIGRATION — mevcut DB'de eksik sütunları ekle ──
+try { db.exec("ALTER TABLE families ADD COLUMN join_code TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE completions ADD COLUMN subtasks_done TEXT DEFAULT '[]'"); } catch(e) {}
+try { db.exec("ALTER TABLE completions ADD COLUMN behavior_bonus INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE completions ADD COLUMN behavior_note TEXT"); } catch(e) {}
+
+// Mevcut ailelerde join_code yoksa oluştur
+const familiesWithoutCode = db.prepare("SELECT id FROM families WHERE join_code IS NULL").all();
+familiesWithoutCode.forEach(f => {
+  const code = Math.random().toString(36).slice(2,8).toUpperCase();
+  db.prepare("UPDATE families SET join_code=? WHERE id=?").run(code, f.id);
+});
 
 module.exports = db;
