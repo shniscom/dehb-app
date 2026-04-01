@@ -146,8 +146,9 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
       <div class="error-msg" id="child-error"></div>
       <div class="form-group">
         <label class="form-label">Aile Kodu</label>
-        <input class="form-input" id="family-code" type="number" placeholder="Ebeveyninden al"
-          oninput="loadChildren()">
+        <input class="form-input" id="family-code" type="text" placeholder="Ebeveyninden al (ör: DEMO01)"
+          oninput="this.value=this.value.toUpperCase();loadChildren()"
+          style="letter-spacing:.08em;font-weight:800;text-align:center;font-size:18px">
       </div>
       <div id="children-area" style="display:none">
         <label class="form-label" style="margin-bottom:8px;display:block">Ben kimim?</label>
