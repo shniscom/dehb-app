@@ -90,10 +90,11 @@ const RewardsAPI = {
 };
 
 const ReportsAPI = {
-  weekly:   (childId)  => get(`/reports/weekly/${childId}`),
-  category: (childId)  => get(`/reports/category/${childId}`),
-  streak:   (childId)  => get(`/reports/streak/${childId}`),
-  summary:  (childId)  => get(`/reports/summary/${childId}`),
+  weekly:   (childId)        => get(`/reports/weekly/${childId}`),
+  category: (childId)        => get(`/reports/category/${childId}`),
+  streak:   (childId)        => get(`/reports/streak/${childId}`),
+  summary:  (childId)        => get(`/reports/summary/${childId}`),
+  activity: (childId, days=7) => get(`/reports/activity/${childId}?days=${days}`),
 };
 
 // ── SOUND ENGINE (Web Audio API - harici dosya gerektirmez) ──
