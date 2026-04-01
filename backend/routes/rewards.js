@@ -34,8 +34,21 @@ router.delete('/:id', parentOnly, (req, res) => {
 router.post('/:id/claim', (req, res) => {
   const reward = db.prepare('SELECT * FROM rewards WHERE id=? AND is_active=1').get(req.params.id);
   if (!reward) return res.status(404).json({error:'Ödül bulunamadı'});
-  const total = calcTotal(db, req.user.id);
-  if (total < reward.pts_required) return res.status(400).json({error:'Yeterli puan yok', current:total, required:reward.pts_required});
+
+  // Hem ledger hem de total_points kolonuna bak, büyük olanı kullan
+  const ledgerTotal = calcTotal(db, req.user.id);
+  const userRow     = db.prepare('SELECT total_points FROM users WHERE id=?').get(req.user.id);
+  const total       = Math.max(ledgerTotal, userRow?.total_points || 0);
+
+  if (total < reward.pts_required)
+    return res.status(400).json({error:'Yeterli puan yok', current:total, required:reward.pts_required});
+
+  // Zaten bekleyen talep var mı?
+  const existing = db.prepare(
+    "SELECT id FROM reward_claims WHERE reward_id=? AND child_id=? AND status='pending'"
+  ).get(reward.id, req.user.id);
+  if (existing) return res.status(409).json({error:'Bu ödül için zaten bekleyen bir talep var'});
+
   const result = db.prepare('INSERT INTO reward_claims (reward_id,child_id) VALUES (?,?)').run(reward.id, req.user.id);
   res.status(201).json({id:result.lastInsertRowid, status:'pending'});
 });
