@@ -161,4 +161,76 @@ function generateInsights(overall, bestHour, worstCat) {
   return insights;
 }
 
+// UTC → Türkiye saatine çevir (UTC+3)
+function toTurkeyTime(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  d.setHours(d.getHours() + 3);
+  return d.toISOString().replace('T', ' ').slice(0, 16);
+}
+
+// GET /api/reports/activity/:childId?days=7
+// Günlük detaylı aktivite log — her tamamlama, alt görevler, bonus, saat bilgisi
+router.get('/activity/:childId', (req, res) => {
+  if (!canAccessChild(req, req.params.childId)) return res.status(403).json({ error: 'Erişim reddedildi' });
+
+  const days = Math.min(parseInt(req.query.days) || 7, 30);
+  const startDate = (() => {
+    const d = new Date(); d.setDate(d.getDate() - (days - 1));
+    return d.toISOString().split('T')[0];
+  })();
+
+  const rows = db.prepare(`
+    SELECT
+      c.id, c.due_date, c.status, c.quality, c.pts_awarded,
+      c.subtasks_done, c.behavior_bonus, c.behavior_note,
+      c.completed_at, c.approved_at, c.parent_note, c.was_late,
+      t.title AS task_title, t.icon AS task_icon, t.category,
+      t.subtasks, t.pts_base, t.pts_great, t.pts_good, t.duration_min
+    FROM completions c
+    JOIN tasks t ON t.id = c.task_id
+    WHERE c.child_id = ? AND c.due_date >= ?
+    ORDER BY c.due_date DESC, c.completed_at DESC
+  `).all(req.params.childId, startDate);
+
+  // Günlere göre grupla
+  const byDay = {};
+  rows.forEach(r => {
+    const day = r.due_date;
+    if (!byDay[day]) byDay[day] = { date: day, completions: [], total_pts: 0, done_count: 0, pending_count: 0 };
+
+    const allSubs  = JSON.parse(r.subtasks || '[]');
+    const doneSubs = JSON.parse(r.subtasks_done || '[]');
+
+    const entry = {
+      id:              r.id,
+      task_title:      r.task_title,
+      task_icon:       r.task_icon,
+      category:        r.category,
+      status:          r.status,
+      quality:         r.quality,
+      pts_awarded:     r.pts_awarded,
+      pts_base:        r.pts_base,
+      behavior_bonus:  r.behavior_bonus,
+      behavior_note:   r.behavior_note,
+      parent_note:     r.parent_note,
+      was_late:        r.was_late,
+      duration_min:    r.duration_min,
+      all_subtasks:    allSubs,
+      done_subtasks:   doneSubs,
+      completion_rate: allSubs.length > 0 ? Math.round((doneSubs.length / allSubs.length) * 100) : 100,
+      // Türkiye saati
+      completed_at_tr: toTurkeyTime(r.completed_at),
+      approved_at_tr:  toTurkeyTime(r.approved_at),
+      completed_hour:  r.completed_at ? new Date(r.completed_at).getUTCHours() + 3 : null,
+    };
+
+    byDay[day].completions.push(entry);
+    if (r.status === 'approved') { byDay[day].total_pts += r.pts_awarded; byDay[day].done_count++; }
+    if (r.status === 'pending')  byDay[day].pending_count++;
+  });
+
+  res.json(Object.values(byDay).sort((a,b) => b.date.localeCompare(a.date)));
+});
+
 module.exports = router;
