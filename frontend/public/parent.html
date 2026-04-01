@@ -562,6 +562,61 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
 .btn-amber { background: var(--amber); color: white; }
 .btn-amber:hover { filter: brightness(1.1); }
 
+/* ── AKTİVİTE LOG ── */
+.activity-day { margin-bottom: 20px; }
+.activity-day-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 6px;
+  padding: 8px 12px;
+  background: var(--surface2); border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+}
+.ad-date  { font-size: 12px; font-weight: 800; color: var(--text); }
+.ad-stats { font-size: 11px; color: var(--muted); font-weight: 600; }
+
+.activity-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.activity-row:hover { border-color: rgba(255,255,255,0.15); }
+
+.ar-main {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+}
+.ar-icon  { font-size: 20px; flex-shrink: 0; }
+.ar-info  { flex: 1; min-width: 0; }
+.ar-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ar-meta  { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.ar-pts   { font-size: 13px; font-weight: 800; white-space: nowrap; flex-shrink: 0; }
+.ar-toggle { font-size: 14px; color: var(--muted); flex-shrink: 0; transition: transform .2s; }
+
+.ar-detail {
+  padding: 10px 12px 12px 42px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.ar-section-label {
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted); margin-bottom: 6px;
+}
+.ar-subtask {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 0; font-size: 12px; font-weight: 600;
+}
+
+/* Pending task görsel */
+.task-card.pending-task {
+  opacity: 0.85;
+  border-color: rgba(255,179,71,0.3);
+  cursor: pointer !important;
+}
+.task-card.pending-task::before { background: var(--amber) !important; }
+
 .behavior-preset {
   font-family: 'Nunito', sans-serif;
   font-size: 11px; font-weight: 700;
@@ -875,10 +930,24 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
       </div>
       <div class="report-card" style="margin-top:0">
         <h3>Terapist Paylaşım Notu</h3>
-        <p style="font-size:12px;color:var(--muted);font-weight:600;line-height:1.6;margin-top:8px">
-          Bu haftaki özet: Ali 24 görevden 18'ini tamamladı (%75 başarı oranı). En başarılı kategori "Rutin" (%92), en zorlandığı alan "Okul Ödevi" (%58). Ardışık 4 günlük seri kırıldı — 2 gün önce ödevlerde motivasyon düşüşü gözlemlendi. Sabah rutini tutarlı olarak tamamlanıyor; akşam görevlerinde daha fazla hatırlatma gerekiyor.
+        <p style="font-size:12px;color:var(--muted);font-weight:600;line-height:1.6;margin-top:8px" id="report-therapist-note">
+          Rapor yükleniyor...
         </p>
         <button class="btn btn-teal btn-sm" style="margin-top:12px" onclick="copyReport()">📋 Terapiste Kopyala</button>
+      </div>
+      <!-- Detaylı Aktivite Logu -->
+      <div class="report-card" style="grid-column:1/-1;margin-top:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <h3>📋 Günlük Aktivite Kaydı (TR Saati)</h3>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-primary btn-sm" onclick="changeActivityDays(7)" id="act-7">7 Gün</button>
+            <button class="btn btn-ghost btn-sm" onclick="changeActivityDays(14)" id="act-14">14 Gün</button>
+            <button class="btn btn-ghost btn-sm" onclick="changeActivityDays(30)" id="act-30">30 Gün</button>
+          </div>
+        </div>
+        <div id="report-activity-log">
+          <p style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Yükleniyor...</p>
+        </div>
       </div>
     </div>
 
@@ -1701,15 +1770,14 @@ async function claimReward(id) {
 
 // ── REPORT ──
 async function loadAndRenderReport() {
-  if (!currentChildId) {
-    showEmptyReport(); return;
-  }
+  if (!currentChildId) { showEmptyReport(); return; }
   try {
-    const [weekly, cats, streakData, summary] = await Promise.all([
+    const [weekly, cats, streakData, summary, activity] = await Promise.all([
       ReportsAPI.weekly(currentChildId).catch(()=>[]),
       ReportsAPI.category(currentChildId).catch(()=>[]),
       ReportsAPI.streak(currentChildId).catch(()=>({streak:[],current_streak:0})),
       ReportsAPI.summary(currentChildId).catch(()=>null),
+      ReportsAPI.activity(currentChildId, 7).catch(()=>[]),
     ]);
 
     renderBarChart('report-bar', weekly);
@@ -1734,7 +1802,94 @@ async function loadAndRenderReport() {
       ? summary.insights.map(i=>`<div class="insight-item ${i.type}"><span class="ii-icon">${i.icon}</span><span>${i.text}</span></div>`).join('')
       : '<div class="insight-item info"><span class="ii-icon">💡</span><span>Daha fazla veri birikince öngörüler burada görünecek.</span></div>';
 
+    // Detaylı aktivite log
+    renderActivityLog(activity);
+
   } catch(e) { showEmptyReport(); }
+}
+
+function renderActivityLog(activity) {
+  const el = document.getElementById('report-activity-log');
+  if (!el) return;
+
+  if (!activity || !activity.length) {
+    el.innerHTML = '<p style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Henüz kayıt yok</p>';
+    return;
+  }
+
+  const qualLabel = {great:'🌟 Çok İyi', good:'😊 İyi', ok:'🙂 Tamamlandı', late:'⏰ Geç'};
+  const statusLabel = {approved:'✅ Onaylandı', pending:'⏳ Bekliyor', rejected:'❌ Reddedildi'};
+  const statusColor = {approved:'var(--green)', pending:'var(--amber)', rejected:'var(--coral)'};
+
+  el.innerHTML = activity.map(day => `
+    <div class="activity-day">
+      <div class="activity-day-header">
+        <span class="ad-date">${formatTRDate(day.date)}</span>
+        <span class="ad-stats">
+          ✅ ${day.done_count} tamamlandı
+          ${day.pending_count > 0 ? `· ⏳ ${day.pending_count} bekliyor` : ''}
+          · <strong style="color:var(--amber)">+${day.total_pts} ⭐</strong>
+        </span>
+      </div>
+      ${day.completions.map(c => `
+        <div class="activity-row" onclick="toggleActivityDetail(this)">
+          <div class="ar-main">
+            <span class="ar-icon">${c.task_icon||'📋'}</span>
+            <div class="ar-info">
+              <div class="ar-title">${c.task_title}</div>
+              <div class="ar-meta">
+                <span style="color:${statusColor[c.status]}">${statusLabel[c.status]||c.status}</span>
+                · ${c.completed_at_tr}
+                ${c.was_late ? '· ⏰ Geç' : ''}
+              </div>
+            </div>
+            <div class="ar-pts" style="color:${c.pts_awarded>0?'var(--amber)':'var(--muted)'}">
+              ${c.pts_awarded > 0 ? '+'+c.pts_awarded : '—'} ⭐
+            </div>
+            <span class="ar-toggle">▾</span>
+          </div>
+          <div class="ar-detail" style="display:none">
+            ${c.all_subtasks.length > 0 ? `
+              <div class="ar-section-label">Alt Görevler</div>
+              ${c.all_subtasks.map(s => `
+                <div class="ar-subtask">
+                  <span>${c.done_subtasks.includes(s) ? '✅' : '❌'}</span>
+                  <span style="${c.done_subtasks.includes(s)?'':'color:var(--muted);text-decoration:line-through'}">${s}</span>
+                </div>
+              `).join('')}
+              <div style="font-size:11px;color:var(--muted);margin-top:4px">
+                ${c.done_subtasks.length}/${c.all_subtasks.length} alt görev · %${c.completion_rate} tamamlama
+              </div>
+            ` : ''}
+            ${c.quality ? `
+              <div class="ar-section-label" style="margin-top:8px">Değerlendirme</div>
+              <div style="font-size:12px">${qualLabel[c.quality]||c.quality}
+                ${c.behavior_bonus && c.behavior_bonus !== 0 ? `· Davranış: ${c.behavior_bonus>0?'+':''}${c.behavior_bonus} ⭐` : ''}
+              </div>
+            ` : ''}
+            ${c.behavior_note ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">📝 ${c.behavior_note}</div>` : ''}
+            ${c.parent_note  ? `<div style="font-size:11px;color:var(--purple);margin-top:4px;font-style:italic">💬 "${c.parent_note}"</div>` : ''}
+            ${c.approved_at_tr ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Onaylanma: ${c.approved_at_tr}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function toggleActivityDetail(row) {
+  const detail = row.querySelector('.ar-detail');
+  const toggle = row.querySelector('.ar-toggle');
+  const isOpen = detail.style.display !== 'none';
+  detail.style.display = isOpen ? 'none' : 'block';
+  if (toggle) toggle.textContent = isOpen ? '▾' : '▴';
+}
+
+function formatTRDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const days = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+  const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function showEmptyReport() {
@@ -1750,8 +1905,32 @@ function setPeriod(p, btn) {
   loadAndRenderReport();
 }
 
+let activityDays = 7;
+async function changeActivityDays(days) {
+  activityDays = days;
+  ['7','14','30'].forEach(d => {
+    const btn = document.getElementById('act-'+d);
+    if (btn) { btn.className = d===String(days) ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'; }
+  });
+  if (!currentChildId) return;
+  try {
+    const activity = await ReportsAPI.activity(currentChildId, days);
+    renderActivityLog(activity);
+  } catch(e) {
+    document.getElementById('report-activity-log').innerHTML =
+      '<p style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Veri yüklenemedi</p>';
+  }
+}
+
 function exportReport() { showToast('📄','PDF raporu hazırlanıyor...'); }
-function copyReport()   { showToast('📋','Terapist notu panoya kopyalandı'); }
+function copyReport() {
+  const note = document.getElementById('report-therapist-note');
+  if (note) {
+    navigator.clipboard.writeText(note.textContent.trim()).then(()=>{
+      showToast('📋','Terapist notu panoya kopyalandı');
+    }).catch(()=>showToast('📋','Terapist notu panoya kopyalandı'));
+  }
+}
 
 // ── MODAL ──
 function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
