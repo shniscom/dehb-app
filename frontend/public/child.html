@@ -948,6 +948,16 @@ body.young .reward-card { width: 140px; }
     <!-- subtasks -->
     <div class="subtasks" id="m-subtasks"></div>
     <button class="btn-start" id="btn-start" onclick="toggleTimer()">▶ Başla</button>
+    <!-- 2 Dakika Kuralı -->
+    <button id="btn-2min" onclick="start2MinRule()" style="
+      width:100%;margin-top:8px;padding:12px;border-radius:var(--radius);
+      border:1.5px solid var(--border);background:transparent;
+      color:var(--muted);font-size:13px;font-weight:700;
+      font-family:'Nunito',sans-serif;cursor:pointer;transition:all .2s;
+      display:none;
+    ">
+      ⏱ Sadece 2 dakika başla (DEHB modu)
+    </button>
   </div>
 </div>
 
@@ -1475,6 +1485,10 @@ function openTask(t) {
   }).join('');
 
   openModal('task-modal');
+
+  // 2 dakika kuralı — sadece 10 dk üstü görevlerde göster
+  const btn2 = document.getElementById('btn-2min');
+  if (btn2) btn2.style.display = (t.duration >= 10) ? 'block' : 'none';
 }
 
 function toggleSubtask(tid, idx) {
@@ -1699,6 +1713,10 @@ async function confirmCompletion() {
     launchConfetti();
     SoundEngine.play('fanfare');
 
+    // Sözel geri bildirim
+    const mesaj = getSözelGeriBildirim(selectedQuality, earned, t.title, streakCount);
+    setTimeout(() => showToast('🎉', mesaj), 600);
+
     // Puanı güncelle
     totalPoints = me.total_points || totalPoints;
     updatePointsDisplay();
@@ -1804,6 +1822,59 @@ function showToast(icon, msg) {
   t.classList.add('show');
   clearTimeout(childToastTimer);
   childToastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ── 2 DAKİKA KURALI ──
+function start2MinRule() {
+  if (!currentTask) return;
+  // Timer'ı sadece 2 dakikaya ayarla
+  timerTotal   = 120; // 2 dk
+  timerSeconds = 120;
+  updateTimerDisplay();
+  updateTimerRing(1);
+  document.getElementById('timer-label').textContent = '2 dk — Başla!';
+  document.getElementById('btn-2min').style.display = 'none';
+  // Sesli başlat
+  SoundEngine.play('start');
+  showToast('⏱', '2 dakika başlıyor! Küçük adım büyük başarı 💪');
+  startTimer();
+}
+
+// ── SÖZEL GERİ BİLDİRİM ──
+function getSözelGeriBildirim(quality, pts, taskTitle, streakCount) {
+  const hour  = new Date().getHours() + 3; // TR saati
+  const msgs  = {
+    great: [
+      `Harika iş! "${taskTitle}" mükemmel geçti! 🌟`,
+      `İnanılmaz! Bu sefer gerçekten çok iyi yaptın! ⭐`,
+      `Süpersin! Ebeveynin çok mutlu olacak! 🏆`,
+      `Mükemmel performans! Sen bir kahramansın! 🦸`,
+    ],
+    good: [
+      `Aferin! "${taskTitle}" iyi geçti! 😊`,
+      `Güzel! Bu böyle devam ederse harika olacak! 👍`,
+      `Evet! Bir adım daha tamamlandı! ✅`,
+    ],
+    ok: [
+      `Tamamladın, bu başlı başına başarı! 💪`,
+      `Bitti! Her tamamlama sayılır! ✓`,
+      `Güzel iş! Devam et! 🚀`,
+    ],
+    late: [
+      `Geç de olsa bitti — bu cesaret ister! ⏰`,
+      `Bitirdin! Zaman yönetimi geliştirilebilir ama oldu! 🕐`,
+    ],
+  };
+
+  // Saate özel mesaj
+  let extra = '';
+  if (hour >= 6 && hour <= 9)   extra = ' Sabahın köründe yapmak kolay değil!';
+  else if (hour >= 20)           extra = ' Akşam yorgunluğuna rağmen, bravo!';
+  else if (streakCount >= 7)     extra = ` ${streakCount} günlük serin devam ediyor! 🔥`;
+  else if (pts >= 20)            extra = ` ${pts} puan — rekor!`;
+
+  const pool = msgs[quality] || msgs.ok;
+  return pool[Math.floor(Math.random() * pool.length)] + extra;
 }
 
 // ── SEVİYE SİSTEMİ ──
