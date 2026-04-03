@@ -690,6 +690,134 @@ body {
 }
 .task-card.partial-task::before { background: var(--teal) !important; }
 
+/* ── LEVEL-UP OVERLAY ── */
+.levelup-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(8px);
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+}
+.levelup-overlay.show { opacity: 1; pointer-events: all; }
+.levelup-badge {
+  font-size: 80px; line-height: 1;
+  animation: badge-pop .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes badge-pop {
+  from { transform: scale(0) rotate(-15deg); opacity:0; }
+  to   { transform: scale(1) rotate(0);     opacity:1; }
+}
+.levelup-title {
+  font-size: 36px; font-weight: 900; color: var(--amber);
+  text-align: center; line-height: 1.2;
+  animation: fade-up-big .4s ease .3s both;
+}
+.levelup-sub {
+  font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.7);
+  text-align: center;
+  animation: fade-up-big .4s ease .45s both;
+}
+.levelup-pts {
+  font-size: 22px; font-weight: 900; color: var(--teal);
+  animation: fade-up-big .4s ease .55s both;
+}
+@keyframes fade-up-big {
+  from { opacity:0; transform: translateY(20px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+.levelup-tap {
+  font-size: 13px; color: rgba(255,255,255,0.4); font-weight: 600;
+  margin-top: 16px;
+  animation: blink 1.2s ease-in-out infinite .8s;
+}
+@keyframes blink { 0%,100%{opacity:0.4} 50%{opacity:0.9} }
+
+/* ── AVATAR RING SEVİYE ── */
+.avatar-ring.lvl-1 { border-color: #888; box-shadow: 0 0 10px rgba(136,136,136,0.3); }
+.avatar-ring.lvl-2 { border-color: var(--teal); box-shadow: 0 0 14px var(--teal-glow); }
+.avatar-ring.lvl-3 { border-color: var(--purple-light); box-shadow: 0 0 18px var(--purple-glow); }
+.avatar-ring.lvl-4 { border-color: var(--amber); box-shadow: 0 0 22px var(--amber-glow); animation: golden-pulse 2s ease-in-out infinite; }
+.avatar-ring.lvl-5 { border-color: #ff6b6b; box-shadow: 0 0 28px rgba(255,107,107,0.5); animation: legendary-pulse 1.5s ease-in-out infinite; }
+@keyframes golden-pulse { 0%,100%{box-shadow:0 0 18px var(--amber-glow)} 50%{box-shadow:0 0 32px rgba(255,179,71,0.6)} }
+@keyframes legendary-pulse { 0%,100%{box-shadow:0 0 22px rgba(255,107,107,0.5)} 50%{box-shadow:0 0 40px rgba(255,107,107,0.8)} }
+
+/* Seviye rozeti */
+.level-badge {
+  position: absolute; bottom: -4px; right: -4px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--bg); border: 2px solid var(--bg);
+  font-size: 11px; font-weight: 900; line-height: 20px;
+  text-align: center; color: var(--amber);
+}
+
+/* ── SUBTASK POP ANİMASYON ── */
+@keyframes subtask-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.subtask-check.popping { animation: subtask-pop .35s cubic-bezier(.34,1.56,.64,1); }
+
+/* ── ŞANS ÇARKI ── */
+.wheel-overlay {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(0,0,0,0.9); backdrop-filter: blur(8px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px;
+  opacity: 0; pointer-events: none; transition: opacity .3s;
+}
+.wheel-overlay.show { opacity:1; pointer-events:all; }
+.wheel-container { position: relative; width: 280px; height: 280px; }
+.wheel-canvas { border-radius: 50%; box-shadow: 0 0 40px rgba(168,127,255,0.4); }
+.wheel-arrow {
+  position: absolute; top: -20px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  z-index: 2;
+}
+.wheel-spin-btn {
+  padding: 14px 36px; border-radius: 30px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--purple), var(--teal));
+  color: white; font-size: 16px; font-weight: 900;
+  font-family: 'Nunito', sans-serif;
+  box-shadow: 0 4px 20px var(--purple-glow);
+  transition: all .2s;
+}
+.wheel-spin-btn:active { transform: scale(0.96); }
+.wheel-spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.wheel-title {
+  font-size: 22px; font-weight: 900; color: var(--amber);
+  text-align: center;
+}
+.wheel-sub { font-size: 13px; color: var(--muted); text-align: center; font-weight: 600; }
+.wheel-result {
+  font-size: 24px; font-weight: 900; color: var(--teal);
+  text-align: center; min-height: 36px;
+  animation: fade-up-big .4s ease both;
+}
+
+/* ── STREAK MİLESTONE BANNER ── */
+.streak-milestone {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+  z-index: 500;
+  background: linear-gradient(135deg, var(--purple), var(--amber));
+  border-radius: 20px; padding: 12px 24px;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+  font-size: 14px; font-weight: 800; color: white;
+}
+.streak-milestone.show { transform: translateX(-50%) translateY(0); }
+
+/* ── TIMER RENK GEÇİŞİ ── */
+.timer-fill.green { stroke: url(#tg); }
+.timer-fill.amber { stroke: var(--amber); }
+.timer-fill.red   { stroke: var(--coral); animation: timer-pulse .8s ease-in-out infinite; }
+@keyframes timer-pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
 /* young mode tweaks */
 body.young .task-info h3 { font-size: 17px; }
 body.young .task-card { padding: 18px; }
@@ -717,8 +845,9 @@ body.young .reward-card { width: 140px; }
   <!-- Header -->
   <div class="header">
     <div class="header-left">
-      <div class="avatar-ring">
+      <div class="avatar-ring lvl-1" id="avatar-ring">
         <div class="avatar-inner" id="avatar-emoji">🦸</div>
+        <div class="level-badge" id="level-badge">1</div>
       </div>
       <div class="greeting">
         <h2 id="greet-name">Merhaba, Ali! 👋</h2>
@@ -901,8 +1030,36 @@ body.young .reward-card { width: 140px; }
   </div>
 </div>
 
+<!-- Level-up overlay -->
+<div class="levelup-overlay" id="levelup-overlay" onclick="closeLevelUp()">
+  <div class="levelup-badge" id="levelup-badge">🏆</div>
+  <div class="levelup-title" id="levelup-title">SEVİYE ATLADIN!</div>
+  <div class="levelup-sub" id="levelup-sub">Süper Kahraman oldun!</div>
+  <div class="levelup-pts" id="levelup-pts">⭐ 150 puan</div>
+  <div class="levelup-tap">Devam etmek için dokun</div>
+</div>
+
+<!-- Şans çarkı overlay -->
+<div class="wheel-overlay" id="wheel-overlay">
+  <div class="wheel-title">🎡 Şans Çarkı!</div>
+  <div class="wheel-sub">Bu haftaki tüm görevleri tamamladın!</div>
+  <div class="wheel-container">
+    <div class="wheel-arrow">▼</div>
+    <canvas class="wheel-canvas" id="wheel-canvas" width="280" height="280"></canvas>
+  </div>
+  <div class="wheel-result" id="wheel-result"></div>
+  <button class="wheel-spin-btn" id="wheel-spin-btn" onclick="spinWheel()">🎰 Çevir!</button>
+  <button onclick="closeWheel()" style="background:none;border:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;padding:8px">Kapat</button>
+</div>
+
+<!-- Streak milestone banner -->
+<div class="streak-milestone" id="streak-milestone">
+  <span style="font-size:24px">🔥</span>
+  <span id="streak-milestone-text">7 Günlük Seri!</span>
+</div>
+
 <!-- Aktif görev barı - timer çalışırken görünür -->
-<div id="active-task-bar" style="display:none;position:fixed;bottom:72px;left:0;right:0;z-index:49;background:linear-gradient(135deg,rgba(124,92,191,0.95),rgba(62,207,178,0.95));backdrop-filter:blur(12px);padding:10px 16px;display:none;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,0.3)"></div>
+<div id="active-task-bar" style="display:none;position:fixed;bottom:72px;left:0;right:0;z-index:49;background:linear-gradient(135deg,rgba(124,92,191,0.95),rgba(62,207,178,0.95));backdrop-filter:blur(12px);padding:10px 16px;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,0.3)"></div>
 
 <!-- Toast -->
 <div class="child-toast" id="child-toast">
@@ -976,6 +1133,7 @@ async function init() {
   } catch(e) {}
 
   updatePointsDisplay();
+  updateAvatarLevel(totalPoints);
   await loadTasks();
   await loadRewards();
   await loadStreak();
@@ -1320,10 +1478,19 @@ function openTask(t) {
 }
 
 function toggleSubtask(tid, idx) {
-  const el = document.getElementById(`sub-${tid}-${idx}`);
-  el.classList.toggle('done');
+  const el    = document.getElementById(`sub-${tid}-${idx}`);
   const check = el.querySelector('.subtask-check');
-  check.textContent = el.classList.contains('done') ? '✓' : '';
+  el.classList.toggle('done');
+  const isDone = el.classList.contains('done');
+  check.textContent = isDone ? '✓' : '';
+  if (isDone) {
+    // Pop animasyonu
+    check.classList.remove('popping');
+    void check.offsetWidth; // reflow
+    check.classList.add('popping');
+    setTimeout(() => check.classList.remove('popping'), 400);
+    SoundEngine.play('subtask_pop');
+  }
 }
 
 // ── ZAMANLAYICI ──
@@ -1344,6 +1511,7 @@ function startTimer() {
   document.getElementById('btn-start').textContent = '🏁  Bitti!';
   document.getElementById('btn-start').className   = 'btn-start running';
   document.getElementById('timer-label').textContent = 'Sayıyor...';
+  SoundEngine.play('start');
   timerInterval = setInterval(()=>{
     timerSeconds--;
     if (timerSeconds <= 0) {
@@ -1353,14 +1521,27 @@ function startTimer() {
       document.getElementById('timer-label').textContent = 'Süre doldu!';
       document.getElementById('btn-start').textContent   = '⏰  Geç Bitti!';
       document.getElementById('btn-start').className     = 'btn-start';
-      // Süre dolunca modal açıksa kalsın, kapalıysa tekrar aç
+      SoundEngine.play('timer_warn');
       if (!document.getElementById('task-modal').classList.contains('open')) {
         openModal('task-modal');
       }
     }
     updateTimerDisplay();
-    updateTimerRing(timerSeconds/timerTotal);
-    renderActiveTaskBar(); // Arka planda bar güncelle
+    // Renk geçişi
+    const pct = timerTotal > 0 ? timerSeconds/timerTotal : 1;
+    const circle = document.getElementById('timer-circle');
+    if (circle) {
+      if (pct > 0.5) {
+        circle.className = 'timer-fill green';
+      } else if (pct > 0.25) {
+        if (circle.className !== 'timer-fill amber') SoundEngine.play('timer_warn');
+        circle.className = 'timer-fill amber';
+      } else {
+        circle.className = 'timer-fill red';
+      }
+    }
+    updateTimerRing(pct);
+    renderActiveTaskBar();
   }, 1000);
 }
 
@@ -1508,6 +1689,8 @@ async function confirmCompletion() {
     totalPoints = me.total_points || totalPoints;
     Auth.setUser({...currentUser, total_points: totalPoints});
 
+    const oldPts = totalPoints;
+
     renderTasks();
     updateProgress();
     await loadRewards();
@@ -1515,7 +1698,20 @@ async function confirmCompletion() {
     animatePoints(earned);
     launchConfetti();
     SoundEngine.play('fanfare');
+
+    // Puanı güncelle
+    totalPoints = me.total_points || totalPoints;
     updatePointsDisplay();
+
+    // Level-up kontrolü
+    checkLevelUp(oldPts, totalPoints);
+    updateAvatarLevel(totalPoints);
+
+    // Streak milestone kontrolü
+    checkStreakMilestone(streakCount);
+
+    // Haftalık tamamlama → şans çarkı
+    checkWeeklyComplete();
   } catch(e) {
     if (e.message?.includes('zaten') || e.message?.includes('onay bekliyor')) {
       showToast('⏳', 'Seçtiğin alt görevler zaten gönderildi!');
@@ -1608,6 +1804,192 @@ function showToast(icon, msg) {
   t.classList.add('show');
   clearTimeout(childToastTimer);
   childToastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ── SEVİYE SİSTEMİ ──
+const LEVELS = [
+  { min:0,   max:49,  lvl:1, name:'Yeni Kahraman',  badge:'🌱', ring:'lvl-1' },
+  { min:50,  max:149, lvl:2, name:'Görev Savaşçısı', badge:'⚔️', ring:'lvl-2' },
+  { min:150, max:299, lvl:3, name:'Süper Kahraman',  badge:'🦸', ring:'lvl-3' },
+  { min:300, max:499, lvl:4, name:'Altın Kahraman',  badge:'🏆', ring:'lvl-4' },
+  { min:500, max:Infinity, lvl:5, name:'Efsane',     badge:'👑', ring:'lvl-5' },
+];
+
+function getLevel(pts) {
+  return LEVELS.find(l => pts >= l.min && pts <= l.max) || LEVELS[0];
+}
+
+function updateAvatarLevel(pts) {
+  const lvl  = getLevel(pts);
+  const ring  = document.getElementById('avatar-ring');
+  const badge = document.getElementById('level-badge');
+  if (!ring) return;
+  ring.className = 'avatar-ring ' + lvl.ring;
+  if (badge) badge.textContent = lvl.lvl;
+}
+
+function checkLevelUp(oldPts, newPts) {
+  const oldLvl = getLevel(oldPts);
+  const newLvl = getLevel(newPts);
+  if (newLvl.lvl > oldLvl.lvl) {
+    showLevelUp(newLvl, newPts);
+  }
+}
+
+function showLevelUp(lvl, pts) {
+  SoundEngine.play('levelup');
+  launchConfetti();
+  const overlay = document.getElementById('levelup-overlay');
+  document.getElementById('levelup-badge').textContent = lvl.badge;
+  document.getElementById('levelup-title').textContent = `SEVİYE ${lvl.lvl}!`;
+  document.getElementById('levelup-sub').textContent   = lvl.name + ' oldun!';
+  document.getElementById('levelup-pts').textContent   = `⭐ ${pts} puan`;
+  overlay.classList.add('show');
+  // Arka plana ekstra confetti
+  setTimeout(() => launchConfetti(), 400);
+}
+
+function closeLevelUp() {
+  document.getElementById('levelup-overlay').classList.remove('show');
+}
+
+// ── STREAK MİLESTONE ──
+const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
+
+function checkStreakMilestone(streak) {
+  if (STREAK_MILESTONES.includes(streak)) {
+    showStreakMilestone(streak);
+  }
+}
+
+function showStreakMilestone(streak) {
+  SoundEngine.play('streak_milestone');
+  const el   = document.getElementById('streak-milestone');
+  const text = document.getElementById('streak-milestone-text');
+  text.textContent = `${streak} Günlük Seri! Muhteşem! 🔥`;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── HAFTALIK TAMAMLAMA — ŞANS ÇARKI ──
+let wheelSpinning = false;
+let wheelAngle    = 0;
+let wheelPrizes   = [];
+
+function checkWeeklyComplete() {
+  const allDone = tasks.length > 0 && tasks.every(t => t.done || t.pending);
+  if (allDone && tasks.length > 0) {
+    setTimeout(() => showWheel(), 1200);
+  }
+}
+
+function buildWheelPrizes() {
+  // Ödüllerden al, yoksa varsayılan ödüller
+  if (rewardsList && rewardsList.length > 0) {
+    return rewardsList.slice(0, 8).map(r => ({ label: r.title||r.name, icon: r.icon||'🎁', color: null }));
+  }
+  return [
+    { label: 'Ekstra Oyun',  icon: '🎮' }, { label: 'Dondurma',   icon: '🍦' },
+    { label: 'Film Gecesi',  icon: '🎬' }, { label: 'Şanssız',    icon: '😅' },
+    { label: '+10 Bonus',    icon: '⭐' }, { label: 'Park Gezisi', icon: '🎡' },
+    { label: 'Oyun Süresi',  icon: '🕹️' }, { label: 'Sürpriz!',   icon: '🎁' },
+  ];
+}
+
+function drawWheel(angle) {
+  const canvas = document.getElementById('wheel-canvas');
+  if (!canvas) return;
+  const ctx  = canvas.getContext('2d');
+  const cx   = 140; const cy = 140; const r = 130;
+  const n    = wheelPrizes.length;
+  const arc  = (2 * Math.PI) / n;
+  const colors = ['#7c5cbf','#3ecfb2','#ffb347','#ff6b6b','#60a5fa','#4ade80','#f472b6','#a87fff'];
+
+  ctx.clearRect(0, 0, 280, 280);
+
+  wheelPrizes.forEach((prize, i) => {
+    const start = angle + i * arc;
+    const end   = start + arc;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Metin
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + arc/2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 11px Nunito, sans-serif';
+    ctx.fillText(prize.icon + ' ' + (prize.label.length > 10 ? prize.label.slice(0,10)+'…' : prize.label), r - 8, 4);
+    ctx.restore();
+  });
+
+  // Merkez daire
+  ctx.beginPath();
+  ctx.arc(cx, cy, 20, 0, 2*Math.PI);
+  ctx.fillStyle = '#0f0e17';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function showWheel() {
+  wheelPrizes = buildWheelPrizes();
+  wheelAngle  = 0;
+  drawWheel(0);
+  document.getElementById('wheel-result').textContent = '';
+  document.getElementById('wheel-spin-btn').disabled = false;
+  document.getElementById('wheel-overlay').classList.add('show');
+}
+
+function closeWheel() {
+  document.getElementById('wheel-overlay').classList.remove('show');
+}
+
+function spinWheel() {
+  if (wheelSpinning) return;
+  wheelSpinning = true;
+  document.getElementById('wheel-spin-btn').disabled = true;
+  document.getElementById('wheel-result').textContent = '';
+  SoundEngine.play('wheel_spin');
+
+  const n         = wheelPrizes.length;
+  const extraSpins = 5 + Math.random() * 3; // 5-8 tam tur
+  const winIdx    = Math.floor(Math.random() * n);
+  const arc       = (2 * Math.PI) / n;
+  // Okun gösterdiği segment hesabı (ok yukarıda = -PI/2)
+  const targetAngle = (2*Math.PI * extraSpins) - winIdx * arc - arc/2 + Math.PI/2;
+  const duration  = 4000 + Math.random() * 1000;
+  const startTime = performance.now();
+  const startAngle = wheelAngle;
+
+  function easeOut(t) { return 1 - Math.pow(1-t, 3); }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    wheelAngle = startAngle + targetAngle * easeOut(t);
+    drawWheel(wheelAngle);
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      wheelSpinning = false;
+      SoundEngine.play('wheel_win');
+      launchConfetti();
+      const prize = wheelPrizes[winIdx];
+      document.getElementById('wheel-result').textContent =
+        `${prize.icon} ${prize.label} kazandın!`;
+    }
+  }
+  requestAnimationFrame(animate);
 }
 
 // ── BAŞLAT ──
