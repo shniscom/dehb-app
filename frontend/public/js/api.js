@@ -113,21 +113,21 @@ const SoundEngine = {
       const t = ctx.currentTime;
 
       switch(type) {
-        case 'complete': // Görev tamamlama - yükselen iki nota
+        case 'complete': // Görev tamamlama
           this._note(ctx,g, 523, t,      0.15, 0.3);
           this._note(ctx,g, 784, t+0.15, 0.15, 0.3);
           break;
-        case 'coin': // Puan kazanma - kısa parlak ses
+        case 'coin': // Puan kazanma
           this._note(ctx,g, 988, t,      0.08, 0.15);
           this._note(ctx,g,1319, t+0.08, 0.08, 0.15);
           break;
-        case 'fanfare': // Büyük başarı - mini fanfar
+        case 'fanfare': // Büyük başarı
           [523,659,784,1047].forEach((f,i)=> this._note(ctx,g,f, t+i*0.1, 0.12, 0.25));
           break;
-        case 'tick': // Alt görev işareti - hafif tık
+        case 'tick': // Alt görev işareti
           this._note(ctx,g, 880, t, 0.05, 0.1);
           break;
-        case 'neutral': // Ceza/uyarı - nötr tık (negatif ses değil)
+        case 'neutral':
           this._note(ctx,g, 330, t, 0.08, 0.2, 'triangle');
           break;
         case 'whoosh': // Onaya gönder
@@ -136,8 +136,37 @@ const SoundEngine = {
         case 'reward': // Ödül talebi
           [659,784,988,1319].forEach((f,i)=> this._note(ctx,g,f, t+i*0.12, 0.1, 0.2));
           break;
+
+        // ── YENİ SESLER ──
+        case 'levelup': // Seviye atlama — epik yükselen fanfar
+          [392,523,659,784,1047,1319].forEach((f,i)=> this._note(ctx,g,f, t+i*0.08, 0.18, 0.35));
+          this._note(ctx,g,1568, t+0.55, 0.3, 0.4);
+          break;
+        case 'subtask_pop': // Alt görev - pop sesi, her seferinde biraz farklı nota
+          const popFreq = [880,988,1047,1175][Math.floor(Math.random()*4)];
+          this._note(ctx,g, popFreq, t, 0.06, 0.12, 'square');
+          this._note(ctx,g, popFreq*1.5, t+0.04, 0.04, 0.08);
+          break;
+        case 'streak_milestone': // Seri rekoru - özel melodi
+          [523,659,523,784,1047].forEach((f,i)=> this._note(ctx,g,f, t+i*0.12, 0.14, 0.28));
+          break;
+        case 'wheel_spin': // Şans çarkı dönüyor - hızlanan tıklama
+          for(let i=0;i<12;i++) this._note(ctx,g, 440+i*20, t+i*0.06*(1-i*0.005), 0.04, 0.1, 'square');
+          break;
+        case 'wheel_win': // Çark kazandı - kutlama
+          [523,659,784,659,784,1047,784,1047,1319].forEach((f,i)=>
+            this._note(ctx,g,f, t+i*0.09, 0.12, 0.22));
+          break;
+        case 'timer_warn': // Timer kırmızıya geçti - dikkat çek
+          this._note(ctx,g, 330, t, 0.06, 0.15, 'sawtooth');
+          this._note(ctx,g, 330, t+0.2, 0.06, 0.15, 'sawtooth');
+          break;
+        case 'start': // Görev başlangıcı - hazır sesi
+          this._sweep(ctx,g, 300, 600, t, 0.2);
+          this._note(ctx,g, 784, t+0.25, 0.12, 0.2);
+          break;
       }
-    } catch(e) { /* ses desteklenmiyorsa sessizce devam et */ }
+    } catch(e) {}
   },
   _note(ctx, gain, freq, start, dur, vol, type='sine') {
     const o = ctx.createOscillator();
