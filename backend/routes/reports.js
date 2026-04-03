@@ -218,4 +218,103 @@ router.get('/activity/:childId', (req, res) => {
   res.json(Object.values(byDay).sort((a, b) => b.date.localeCompare(a.date)));
 });
 
+// GET /api/reports/adaptive/:childId
+// Son 7 günün başarı oranına göre adaptif öneriler üretir
+router.get('/adaptive/:childId', (req, res) => {
+  if (!canAccessChild(req, req.params.childId)) return res.status(403).json({ error: 'Erisim reddedildi' });
+
+  const { childId } = req.params;
+  const d7 = new Date(); d7.setDate(d7.getDate()-7);
+  const startDate = d7.toISOString().split('T')[0];
+
+  // Son 7 günün tamamlama oranı
+  const weekly = db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status='approved' THEN 1 ELSE 0 END) as done,
+      AVG(CASE WHEN status='approved' THEN pts_awarded ELSE 0 END) as avg_pts
+    FROM completions WHERE child_id=? AND due_date>=?
+  `).get(childId, startDate);
+
+  // Kategori bazlı başarı
+  const catStats = db.prepare(`
+    SELECT t.category,
+      COUNT(*) as total,
+      SUM(CASE WHEN c.status='approved' THEN 1 ELSE 0 END) as done,
+      ROUND(100.0*SUM(CASE WHEN c.status='approved' THEN 1 ELSE 0 END)/COUNT(*),1) as pct
+    FROM completions c JOIN tasks t ON t.id=c.task_id
+    WHERE c.child_id=? AND c.due_date>=?
+    GROUP BY t.category ORDER BY pct ASC
+  `).all(childId, startDate);
+
+  // En zorlu görevler (en az tamamlanan)
+  const hardTasks = db.prepare(`
+    SELECT t.id, t.title, t.duration_min, t.pts_base,
+      COUNT(*) as attempts,
+      SUM(CASE WHEN c.status='approved' THEN 1 ELSE 0 END) as done,
+      ROUND(100.0*SUM(CASE WHEN c.status='approved' THEN 1 ELSE 0 END)/COUNT(*),1) as pct
+    FROM completions c JOIN tasks t ON t.id=c.task_id
+    WHERE c.child_id=? AND c.due_date>=? AND t.duration_min > 10
+    GROUP BY t.id HAVING attempts >= 2
+    ORDER BY pct ASC LIMIT 3
+  `).all(childId, startDate);
+
+  const total = weekly?.total || 0;
+  const done  = weekly?.done  || 0;
+  const rate  = total > 0 ? Math.round((done/total)*100) : 0;
+
+  // Öneri üret
+  const suggestions = [];
+  const catNames = { rutin:'Rutin', ev:'Ev', okul:'Okul', hareket:'Hareket', sosyal:'Sosyal', bakim:'Bakim' };
+
+  if (rate < 40) {
+    suggestions.push({
+      type: 'reduce_duration',
+      severity: 'high',
+      text: 'Basari orani %' + rate + '. Gorev surelerini yarimina indir ve denemeler.',
+      action: 'Gorev sürelerini kısalt'
+    });
+  } else if (rate < 60) {
+    suggestions.push({
+      type: 'reduce_count',
+      severity: 'medium',
+      text: 'Basari orani %' + rate + '. Gunluk gorev sayisini 2-3 e indir.',
+      action: 'Gorev sayısını azalt'
+    });
+  } else if (rate >= 90) {
+    suggestions.push({
+      type: 'increase_challenge',
+      severity: 'positive',
+      text: 'Mukemmel! Basari orani %' + rate + '. Daha zor gorevler eklenebilir.',
+      action: 'Yeni görev ekle'
+    });
+  }
+
+  hardTasks.forEach(t => {
+    if (t.pct < 40) {
+      suggestions.push({
+        type: 'task_too_hard',
+        task_id: t.id,
+        severity: 'medium',
+        text: '"' + t.title + '" gorevi zorlaniyor (%' + t.pct + '). Alt gorevlere bolun veya sureyi kisalt.',
+        action: 'Gorevi duzelt'
+      });
+    }
+  });
+
+  catStats.forEach(c => {
+    if (c.pct < 30 && c.total >= 3) {
+      suggestions.push({
+        type: 'category_struggle',
+        category: c.category,
+        severity: 'medium',
+        text: (catNames[c.category]||c.category) + ' kategorisinde zorlaniliyor (%' + c.pct + '). Bu kategoriyi hafifletin.',
+        action: 'Kategoriyi hafiflet'
+      });
+    }
+  });
+
+  res.json({ rate, total, done, suggestions, cat_stats: catStats, hard_tasks: hardTasks });
+});
+
 module.exports = router;
