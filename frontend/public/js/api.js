@@ -96,6 +96,7 @@ const ReportsAPI = {
   streak:   (childId)        => get(`/reports/streak/${childId}`),
   summary:  (childId)        => get(`/reports/summary/${childId}`),
   activity: (childId, days=7) => get(`/reports/activity/${childId}?days=${days}`),
+  adaptive: (childId)        => get(`/reports/adaptive/${childId}`),
 };
 
 // ── SOUND ENGINE (Web Audio API - harici dosya gerektirmez) ──
