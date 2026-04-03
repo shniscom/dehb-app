@@ -630,6 +630,29 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
 .btn-amber { background: var(--amber); color: white; }
 .btn-amber:hover { filter: brightness(1.1); }
 
+/* ── ADAPTİF ZORLUK ── */
+.adaptive-card {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--surface2); border-radius: var(--radius-sm);
+  padding: 12px 14px; margin-bottom: 8px;
+  border-left: 3px solid transparent;
+}
+.adaptive-card.high   { border-left-color: var(--coral); }
+.adaptive-card.medium { border-left-color: var(--amber); }
+.adaptive-card.positive { border-left-color: var(--green); }
+.adaptive-card .ac-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.adaptive-card .ac-body { flex: 1; }
+.adaptive-card .ac-body h4 { font-size: 12px; font-weight: 800; margin-bottom: 3px; }
+.adaptive-card .ac-body p  { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.adaptive-card .ac-action {
+  font-size: 11px; font-weight: 800; padding: 5px 10px;
+  border-radius: 8px; border: none; cursor: pointer;
+  background: var(--surface); color: var(--text);
+  font-family: 'Nunito', sans-serif; flex-shrink: 0;
+  transition: all .15s;
+}
+.adaptive-card .ac-action:hover { background: var(--purple); color: white; }
+
 /* ── AKTİVİTE LOG ── */
 .activity-day { margin-bottom: 20px; }
 .activity-day-header {
@@ -1045,6 +1068,15 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
         <div class="report-card">
           <h3>Klinik Öngörüler 🔬</h3>
           <div class="insights-list" id="report-insights"></div>
+        </div>
+        <div class="report-card" style="grid-column:1/-1">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <h3>🧠 Adaptif Zorluk Önerileri</h3>
+            <span id="adaptive-rate-badge" style="font-size:12px;font-weight:800;padding:4px 12px;border-radius:12px;background:var(--surface2)"></span>
+          </div>
+          <div id="adaptive-suggestions">
+            <p style="font-size:12px;color:var(--muted);text-align:center;padding:16px">Yükleniyor...</p>
+          </div>
         </div>
       </div>
       <div class="report-card" style="margin-top:0">
@@ -1997,12 +2029,13 @@ async function claimReward(id) {
 async function loadAndRenderReport() {
   if (!currentChildId) { showEmptyReport(); return; }
   try {
-    const [weekly, cats, streakData, summary, activity] = await Promise.all([
+    const [weekly, cats, streakData, summary, activity, adaptive] = await Promise.all([
       ReportsAPI.weekly(currentChildId).catch(()=>[]),
       ReportsAPI.category(currentChildId).catch(()=>[]),
       ReportsAPI.streak(currentChildId).catch(()=>({streak:[],current_streak:0})),
       ReportsAPI.summary(currentChildId).catch(()=>null),
-      ReportsAPI.activity(currentChildId, 7).catch(()=>[]),
+      ReportsAPI.activity(currentChildId, activityDays).catch(()=>[]),
+      ReportsAPI.adaptive(currentChildId).catch(()=>null),
     ]);
 
     renderBarChart('report-bar', weekly);
@@ -2029,8 +2062,64 @@ async function loadAndRenderReport() {
 
     // Detaylı aktivite log
     renderActivityLog(activity);
+    renderAdaptiveSuggestions(adaptive);
 
   } catch(e) { showEmptyReport(); }
+}
+
+function renderAdaptiveSuggestions(data) {
+  const el    = document.getElementById('adaptive-suggestions');
+  const badge = document.getElementById('adaptive-rate-badge');
+  if (!el) return;
+
+  if (!data) {
+    el.innerHTML = '<p style="font-size:12px;color:var(--muted);text-align:center;padding:16px">Henüz yeterli veri yok (en az 3 görev gerekli)</p>';
+    return;
+  }
+
+  // Rate badge rengi
+  const rate = data.rate || 0;
+  const badgeColor = rate >= 80 ? 'var(--green)' : rate >= 60 ? 'var(--amber)' : 'var(--coral)';
+  const badgeText  = rate >= 80 ? '✅ Harika' : rate >= 60 ? '⚠️ Gelişebilir' : '🔴 Destek Gerekli';
+  if (badge) {
+    badge.textContent = `%${rate} başarı · ${badgeText}`;
+    badge.style.color = badgeColor;
+  }
+
+  if (!data.suggestions || !data.suggestions.length) {
+    el.innerHTML = '<div class="adaptive-card positive"><span class="ac-icon">✅</span><div class="ac-body"><h4>Her şey yolunda!</h4><p>Başarı oranı iyi seviyede. Sistemi olduğu gibi sürdür.</p></div></div>';
+    return;
+  }
+
+  const icons = { high:'🚨', medium:'⚠️', positive:'🌟' };
+  el.innerHTML = data.suggestions.map(s => `
+    <div class="adaptive-card ${s.severity}">
+      <span class="ac-icon">${icons[s.severity]||'💡'}</span>
+      <div class="ac-body">
+        <h4>${s.type === 'reduce_duration' ? 'Süre Azalt' :
+              s.type === 'reduce_count' ? 'Görev Sayısını Azalt' :
+              s.type === 'increase_challenge' ? 'Zorluk Artır' :
+              s.type === 'task_too_hard' ? 'Görev Çok Zor' :
+              s.type === 'category_struggle' ? 'Kategori Zorluğu' : 'Öneri'}</h4>
+        <p>${s.text}</p>
+      </div>
+      <button class="ac-action" onclick="showPage('tasks')">${s.action||'Düzenle'} →</button>
+    </div>
+  `).join('');
+
+  // Terapist notunu güncelle
+  const noteEl = document.getElementById('report-therapist-note');
+  if (noteEl && data) {
+    const child = childrenData.find(c=>c.id===currentChildId);
+    const name  = child?.name || 'Çocuk';
+    const worstCat = data.cat_stats?.[0];
+    const catNames = {rutin:'Rutin',ev:'Ev',okul:'Okul',hareket:'Hareket',sosyal:'Sosyal',bakim:'Bakım'};
+    noteEl.textContent =
+      `${name} son 7 günde ${data.done}/${data.total} görevi tamamladı (%${rate} başarı oranı). ` +
+      (worstCat ? `En zorlandığı alan: ${catNames[worstCat.category]||worstCat.category} (%${worstCat.pct}). ` : '') +
+      (data.suggestions.length > 0 ? `${data.suggestions.length} iyileştirme önerisi mevcut. ` : 'Genel performans iyi seviyede. ') +
+      'Token economy sistemi uygulanıyor; ebeveyn onayı ile anlık puan veriliyor.';
+  }
 }
 
 function renderActivityLog(activity) {
