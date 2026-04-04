@@ -172,6 +172,28 @@ try { db.exec("ALTER TABLE completions ADD COLUMN subtasks_done TEXT DEFAULT '[]
 try { db.exec("ALTER TABLE completions ADD COLUMN behavior_bonus INTEGER DEFAULT 0"); } catch(e) {}
 try { db.exec("ALTER TABLE completions ADD COLUMN behavior_note TEXT"); } catch(e) {}
 
+// Push token tablosu
+db.exec(`
+  CREATE TABLE IF NOT EXISTS push_tokens (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token      TEXT NOT NULL,
+    platform   TEXT DEFAULT 'web',
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, token)
+  );
+
+  CREATE TABLE IF NOT EXISTS push_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER,
+    type       TEXT,
+    title      TEXT,
+    body       TEXT,
+    sent_at    TEXT DEFAULT (datetime('now')),
+    success    INTEGER DEFAULT 0
+  );
+`);
+
 // Mevcut ailelerde join_code yoksa oluştur
 const familiesWithoutCode = db.prepare("SELECT id FROM families WHERE join_code IS NULL").all();
 familiesWithoutCode.forEach(f => {
