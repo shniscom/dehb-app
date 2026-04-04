@@ -22,6 +22,26 @@ app.use('/api/tasks',       require('./routes/tasks'));
 app.use('/api/completions', require('./routes/completions'));
 app.use('/api/rewards',     require('./routes/rewards'));
 app.use('/api/reports',     require('./routes/reports'));
+app.use('/api/push',        require('./routes/push').router);
+
+// ── OTOMATİK BİLDİRİM HOOK'LARI ──
+// Completion onaylanınca çocuğa bildirim gönder
+const { sendToUser } = require('./routes/push');
+const db = require('./db');
+
+app.patch('/api/completions/:id/approve', async (req, res, next) => {
+  // Orijinal handler çalıştıktan sonra bildirim gönder
+  res.on('finish', async () => {
+    if (res.statusCode === 200) {
+      try {
+        await fetch(`http://localhost:${process.env.PORT||3000}/api/push/notify/task-approved`,
+          { method:'POST', headers:{'Content-Type':'application/json','Authorization':req.headers.authorization||''},
+            body: JSON.stringify({ completion_id: req.params.id }) });
+      } catch(e) {}
+    }
+  });
+  next();
+});
 
 // ── STATIC FRONTEND ──
 const publicDir = path.join(__dirname, '..', 'frontend', 'public');
