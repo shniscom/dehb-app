@@ -239,4 +239,24 @@ router.post('/test', parentOnly, async (req, res) => {
   res.json(result);
 });
 
+// ── PUSH LOG — son gönderilen bildirimler ──
+router.get('/log', parentOnly, (req, res) => {
+  const logs = db.prepare(`
+    SELECT * FROM push_log
+    WHERE user_id = ?
+    ORDER BY sent_at DESC LIMIT 20
+  `).all(req.user.id);
+  res.json(logs);
+});
+
+// ── TOKEN KONTROL ──
+router.get('/status', (req, res) => {
+  const tokens = db.prepare('SELECT token, platform, created_at FROM push_tokens WHERE user_id=?').all(req.user.id);
+  res.json({
+    token_count: tokens.length,
+    permission: 'check_client_side',
+    tokens: tokens.map(t => ({ platform: t.platform, created_at: t.created_at, token_preview: t.token.slice(0,20)+'...' }))
+  });
+});
+
 module.exports = { router, sendToUser };
