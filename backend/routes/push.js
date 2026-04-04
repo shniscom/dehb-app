@@ -13,12 +13,20 @@ function getAdmin() {
   try {
     const admin = require('firebase-admin');
     if (!admin.apps.length) {
-      // Service account JSON dosyası veya env var'dan yükle
-      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
-        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-        : null;
+      let serviceAccount = null;
+
+      // Önce base64 formatını dene (Coolify için önerilen)
+      if (process.env.FIREBASE_SERVICE_ACCOUNT_B64) {
+        const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8');
+        serviceAccount = JSON.parse(decoded);
+      }
+      // Sonra düz JSON formatını dene
+      else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      }
+
       if (!serviceAccount) {
-        console.warn('[Push] FIREBASE_SERVICE_ACCOUNT env var yok — push devre dışı');
+        console.warn('[Push] Firebase service account bulunamadı — push devre dışı');
         return null;
       }
       admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
