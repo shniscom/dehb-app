@@ -2362,11 +2362,15 @@ async function renderFamilyPage() {
             <button class="btn btn-primary" style="width:100%;padding:10px;margin-bottom:6px" onclick="requestPushPermission()">
               🔔 Bildirim İzni Ver
             </button>
-            <button class="btn btn-ghost" style="width:100%;padding:10px" onclick="sendTestPush()">
+            <button class="btn btn-ghost" style="width:100%;padding:10px;margin-bottom:6px" onclick="sendTestPush()">
               📨 Test Bildirimi Gönder
             </button>
+            <button class="btn btn-ghost" style="width:100%;padding:10px" onclick="checkPushLog()">
+              📋 Son Bildirim Logları
+            </button>
+            <div id="push-log-area" style="margin-top:8px;display:none;font-size:11px;line-height:1.6;color:var(--muted)"></div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;font-weight:600;line-height:1.5">
-              Önce izin verin, sonra test gönderin. Telefona da kuruluysa orada da gelir.
+              Bildirim gelmediyse: Chrome → Adres çubuğu 🔒 → Bildirimler → İzin Ver
             </div>
           </div>
             <div id="manual-pts-child-select" style="margin-bottom:8px"></div>
@@ -2856,6 +2860,33 @@ async function requestPushPermission() {
     }
   } catch(e) {
     if (bar) { bar.textContent = '❌ Hata: ' + e.message; bar.style.color = 'var(--coral)'; }
+  }
+}
+
+async function checkPushLog() {
+  const area = document.getElementById('push-log-area');
+  if (!area) return;
+  area.style.display = 'block';
+  area.textContent = '⏳ Yükleniyor...';
+  try {
+    const [logs, status] = await Promise.all([PushAPI.log(), PushAPI.status()]);
+    let html = `<div style="margin-bottom:6px;font-weight:700;color:var(--text)">Kayıtlı token: ${status.token_count}</div>`;
+    if (!logs.length) {
+      html += '<div>Henüz bildirim gönderilmemiş.</div>';
+    } else {
+      html += logs.map(l => `
+        <div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center">
+          <span>${l.success ? '✅' : '❌'}</span>
+          <div style="flex:1">
+            <div style="font-weight:700;color:var(--text)">${l.title||''}</div>
+            <div>${l.body||''}</div>
+            <div style="font-size:10px;opacity:0.6">${l.sent_at||''}</div>
+          </div>
+        </div>`).join('');
+    }
+    area.innerHTML = html;
+  } catch(e) {
+    area.textContent = '❌ Log alınamadı: ' + e.message;
   }
 }
 
