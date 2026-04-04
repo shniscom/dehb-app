@@ -2327,6 +2327,8 @@ const AVATARS    = ['🦸','🦋','🐯','🦊','🐸','🐧','🦁','🐼','�
 const AGE_GROUPS = { young: '6–9 yaş', teen: '9–13 yaş' };
 
 async function renderFamilyPage() {
+  // Push status bar'ı güncelle
+  setTimeout(updatePushStatusBar, 100);
   const cont = document.getElementById('page-family');
   cont.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 360px;gap:20px">
@@ -2352,8 +2354,21 @@ async function renderFamilyPage() {
             </div>
             <div style="font-size:11px;color:var(--muted);margin-top:6px;font-weight:600">Bu kodu çocuğunuzla paylaşın. 🔄 ile yeni kod üretin.</div>
           </div>
-          <div class="form-group" style="margin-top:16px">
-            <label class="form-label">Manuel Puan Ekle / Çıkar</label>
+          <div class="form-group" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+            <label class="form-label">🔔 Push Bildirim Testi</label>
+            <div id="push-status-bar" style="font-size:12px;font-weight:700;padding:8px 12px;border-radius:var(--radius-sm);background:var(--surface2);margin-bottom:8px">
+              ⏳ Bildirim durumu kontrol ediliyor...
+            </div>
+            <button class="btn btn-primary" style="width:100%;padding:10px;margin-bottom:6px" onclick="requestPushPermission()">
+              🔔 Bildirim İzni Ver
+            </button>
+            <button class="btn btn-ghost" style="width:100%;padding:10px" onclick="sendTestPush()">
+              📨 Test Bildirimi Gönder
+            </button>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px;font-weight:600;line-height:1.5">
+              Önce izin verin, sonra test gönderin. Telefona da kuruluysa orada da gelir.
+            </div>
+          </div>
             <div id="manual-pts-child-select" style="margin-bottom:8px"></div>
             <div style="display:flex;gap:8px">
               <input class="form-input" id="manual-delta" type="number" placeholder="ör: 50 veya -10" style="flex:1">
@@ -2826,6 +2841,51 @@ function showPwError(msg) {
   el.textContent = msg; el.style.display = 'block';
 }
 
+// ── PUSH BİLDİRİM ──
+async function requestPushPermission() {
+  const bar = document.getElementById('push-status-bar');
+  if (bar) bar.textContent = '⏳ İzin isteniyor...';
+  try {
+    const r = await PushManager.requestPermission();
+    if (r.ok) {
+      if (bar) { bar.textContent = '✅ Bildirimler aktif!'; bar.style.color = 'var(--green)'; }
+      showToast('🔔', 'Bildirimler açık! Artık onayları anında alacaksınız.');
+    } else {
+      if (bar) { bar.textContent = '❌ İzin verilmedi: ' + (r.reason||''); bar.style.color = 'var(--coral)'; }
+      showToast('❌', 'Bildirim izni verilmedi. Tarayıcı ayarlarından açabilirsiniz.');
+    }
+  } catch(e) {
+    if (bar) { bar.textContent = '❌ Hata: ' + e.message; bar.style.color = 'var(--coral)'; }
+  }
+}
+
+async function sendTestPush() {
+  try {
+    const r = await PushAPI.test();
+    if (r.sent > 0) {
+      showToast('📨', 'Test bildirimi gönderildi! Az sonra gelecek.');
+    } else {
+      showToast('⚠️', 'Bildirim gönderilemedi — önce izin verin.');
+    }
+  } catch(e) {
+    showToast('❌', 'Test gönderilemedi: ' + (e.message||'Sunucu hatası'));
+  }
+}
+
+function updatePushStatusBar() {
+  const bar = document.getElementById('push-status-bar');
+  if (!bar || typeof PushManager === 'undefined') return;
+  const s = PushManager.getStatus();
+  const map = {
+    granted:     ['✅ Bildirimler aktif',                                   'var(--green)'],
+    denied:      ['🚫 Bildirimler engellendi — tarayıcı ayarlarından açın', 'var(--coral)'],
+    unsupported: ['⚠️ Bu tarayıcı bildirimleri desteklemiyor',              'var(--amber)'],
+    default:     ['🔕 Bildirim izni henüz verilmemiş',                      'var(--muted)'],
+  };
+  const [text, color] = map[s] || map.default;
+  bar.textContent = text; bar.style.color = color;
+}
+
 // ── MOBİL MENÜ ──
 function toggleMobileMenu() {
   const sidebar  = document.querySelector('.sidebar');
@@ -2887,6 +2947,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSidebarChildren();
   } catch(e) { console.warn('Çocuk listesi yüklenemedi:', e.message); }
   showPage('dashboard');
+
+  // Push izni iste (3 sn sonra, kullanıcı hazır olsun)
+  setTimeout(async () => {
+    if (typeof PushManager !== 'undefined' && PushManager.isSupported() && PushManager.getStatus() === 'default') {
+      const r = await PushManager.requestPermission();
+      if (r.ok) showToast('🔔', 'Bildirimler aktif! Artık onayları anında alacaksınız.');
+    }
+  }, 3000);
 })();
 </script>
 </body>
