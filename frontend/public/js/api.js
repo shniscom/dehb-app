@@ -192,6 +192,88 @@ const SoundEngine = {
   }
 };
 
+// ── PUSH BİLDİRİM YÖNETİMİ ──
+// !! Firebase config'i buraya girin !!
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyC9RljovCj2oZJhQnCKifl_OqPkuEgQO_c",
+  authDomain:        "gorev-kahramani-df6b2.firebaseapp.com",
+  projectId:         "gorev-kahramani-df6b2",
+  storageBucket:     "gorev-kahramani-df6b2.firebasestorage.app",
+  messagingSenderId: "591412780640",
+  appId:             "1:591412780640:web:cfb136e913761007516d05",
+};
+const VAPID_KEY = "BGBg9ndjw09TmT_7Zfxp1yoXcP6BIHpgVeKGlZkk2AuOU5dy8riVc-3QiLDC6gYv4t-xEDIp7cKksKkIuI0ux8M";
+
+const PushManager = {
+  messaging: null,
+  token: null,
+
+  async init() {
+    // Firebase yüklü değilse dinamik yükle
+    if (typeof firebase === 'undefined') {
+      await this._loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+      await this._loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+    }
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    this.messaging = firebase.messaging();
+    return true;
+  },
+
+  async requestPermission() {
+    try {
+      await this.init();
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return { ok: false, reason: 'İzin verilmedi' };
+      const token = await this.messaging.getToken({ vapidKey: VAPID_KEY });
+      if (!token) return { ok: false, reason: 'Token alınamadı' };
+      this.token = token;
+      // Backend'e kaydet
+      await apiCall('POST', '/push/subscribe', { token, platform: 'web' });
+      localStorage.setItem('push_token', token);
+      return { ok: true, token };
+    } catch(e) {
+      console.warn('[Push] requestPermission hatası:', e.message);
+      return { ok: false, reason: e.message };
+    }
+  },
+
+  async unsubscribe() {
+    const token = localStorage.getItem('push_token');
+    if (token) {
+      try { await apiCall('POST', '/push/unsubscribe', { token }); } catch(e) {}
+      localStorage.removeItem('push_token');
+    }
+  },
+
+  isSupported() {
+    return 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+  },
+
+  getStatus() {
+    if (!this.isSupported()) return 'unsupported';
+    return Notification.permission; // 'default' | 'granted' | 'denied'
+  },
+
+  _loadScript(src) {
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  },
+};
+
+const PushAPI = {
+  subscribe:       (token, platform) => post('/push/subscribe', { token, platform }),
+  unsubscribe:     (token)           => post('/push/unsubscribe', { token }),
+  test:            ()                => post('/push/test'),
+  notifyApproved:  (completion_id)   => post('/push/notify/task-approved',  { completion_id }),
+  notifyRejected:  (completion_id)   => post('/push/notify/task-rejected',  { completion_id }),
+  notifyClaimed:   (claim_id)        => post('/push/notify/reward-claimed',  { claim_id }),
+  notifyReminder:  (child_id)        => post('/push/notify/evening-reminder',{ child_id }),
+  streakWarning:   (child_id, streak_count) => post('/push/notify/streak-warning', { child_id, streak_count }),
+};
+
 function formatDate(isoStr) {
   if (!isoStr) return '';
   const d = new Date(isoStr);
@@ -207,5 +289,7 @@ window.CompletionsAPI = CompletionsAPI;
 window.RewardsAPI = RewardsAPI;
 window.ReportsAPI = ReportsAPI;
 window.SoundEngine = SoundEngine;
+window.PushManager = PushManager;
+window.PushAPI = PushAPI;
 window.formatDate = formatDate;
 window.todayStr = todayStr;
