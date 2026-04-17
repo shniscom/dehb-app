@@ -194,6 +194,25 @@ db.exec(`
   );
 `);
 
+// ── KİTAP TABLOSU ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS books (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    family_id    INTEGER NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+    child_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    title        TEXT NOT NULL,
+    author       TEXT DEFAULT '',
+    publisher    TEXT DEFAULT '',
+    page_count   INTEGER DEFAULT 0,
+    cover_emoji  TEXT DEFAULT '📖',
+    read_count   INTEGER DEFAULT 0 CHECK(read_count >= 0),
+    notes        TEXT DEFAULT '',
+    added_by     INTEGER REFERENCES users(id),
+    created_at   TEXT DEFAULT (datetime('now')),
+    updated_at   TEXT DEFAULT (datetime('now'))
+  );
+`);
+
 // Mevcut ailelerde join_code yoksa oluştur
 const familiesWithoutCode = db.prepare("SELECT id FROM families WHERE join_code IS NULL").all();
 familiesWithoutCode.forEach(f => {
