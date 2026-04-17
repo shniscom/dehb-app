@@ -901,6 +901,14 @@ body.young .reward-card { width: 140px; }
     <div class="section-title">Ödüller</div>
     <div class="rewards-scroll" id="rewards-list"></div>
   </div>
+
+  <!-- Books -->
+  <div class="rewards-section" id="child-books-section">
+    <div class="section-title">📚 Kitaplığım</div>
+    <div id="child-books-list" style="display:grid;gap:12px;padding-bottom:8px">
+      <div style="text-align:center;padding:24px;opacity:0.5;font-size:13px">⏳ Yükleniyor...</div>
+    </div>
+  </div>
 </div>
 
 <!-- Task detail modal -->
@@ -1147,6 +1155,49 @@ async function init() {
   await loadTasks();
   await loadRewards();
   await loadStreak();
+  await loadChildBooks();
+}
+
+// ── KİTAPLIK (ÇOCUK) ──
+async function loadChildBooks() {
+  const el = document.getElementById('child-books-list');
+  try {
+    const userId = currentUser?.id;
+    const all = await BooksAPI.list();
+    // Çocuğa ait veya tüm aileye açık kitapları göster
+    const mine = all.filter(b => !b.child_id || b.child_id === userId);
+
+    if (!mine.length) {
+      el.innerHTML = '<div style="text-align:center;padding:24px;opacity:0.5;font-size:13px">📚 Henüz kitap eklenmemiş</div>';
+      return;
+    }
+
+    el.innerHTML = mine.map(b => {
+      const stars = b.read_count > 0
+        ? '⭐'.repeat(Math.min(5, b.read_count)) + (b.read_count > 5 ? ` ×${b.read_count}` : '')
+        : '<span style="opacity:0.4">Henüz okunmadı</span>';
+      return `
+      <div style="background:var(--surface2);border-radius:14px;padding:14px;display:flex;gap:14px;align-items:center">
+        <div style="font-size:36px;flex-shrink:0">${b.cover_emoji||'📖'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px;color:var(--text)">${escHtml(b.title)}</div>
+          ${b.author ? `<div style="font-size:12px;opacity:0.6;margin-top:2px">✍️ ${escHtml(b.author)}</div>` : ''}
+          ${b.page_count ? `<div style="font-size:12px;opacity:0.6">📄 ${b.page_count} sayfa</div>` : ''}
+          <div style="margin-top:6px;font-size:13px">${stars}</div>
+        </div>
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:22px;font-weight:800;color:var(--purple)">${b.read_count}</div>
+          <div style="font-size:10px;opacity:0.5">OKUMA</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;opacity:0.5;font-size:13px">❌ Kitaplar yüklenemedi</div>';
+  }
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── LOGOUT ──
