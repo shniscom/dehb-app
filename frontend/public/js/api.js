@@ -293,5 +293,18 @@ window.ReportsAPI = ReportsAPI;
 window.SoundEngine = SoundEngine;
 window.PushManager = PushManager;
 window.PushAPI = PushAPI;
+
+// ── KİTAP API ──
+const BooksAPI = {
+  list:           ()               => get('/books'),
+  listByChild:    (childId)        => get(`/books/child/${childId}`),
+  add:            (data)           => post('/books', data),
+  update:         (id, data)       => put(`/books/${id}`, data),
+  updateCount:    (id, delta)      => apiCall('PATCH', `/books/${id}/read-count`, { delta }),
+  delete:         (id)             => del(`/books/${id}`),
+  stats:          ()               => get('/books/stats'),
+};
+window.BooksAPI = BooksAPI;
+
 window.formatDate = formatDate;
 window.todayStr = todayStr;
