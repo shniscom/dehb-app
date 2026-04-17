@@ -754,6 +754,47 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
 .live-task-timer .lt-label {
   font-size: 10px; color: var(--muted); font-weight: 700;
 }
+/* ── KİTAP STİLLERİ ── */
+.book-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.2s;
+}
+.book-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+.book-cover { font-size: 40px; text-align: center; }
+.book-title { font-weight: 700; font-size: 15px; color: var(--text); line-height: 1.3; }
+.book-meta  { font-size: 12px; color: var(--muted); }
+.book-read-control {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface2); border-radius: 10px; padding: 8px 12px;
+}
+.book-read-control button {
+  background: var(--purple-bg); border: none; border-radius: 6px;
+  width: 28px; height: 28px; cursor: pointer; font-size: 16px; font-weight: 700;
+  color: var(--purple); display: flex; align-items: center; justify-content: center;
+}
+.book-read-count { font-weight: 700; font-size: 18px; color: var(--purple); min-width: 24px; text-align: center; }
+.book-actions { display: flex; gap: 8px; }
+.book-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px;
+  background: var(--surface2); border-radius: 20px; font-size: 11px; color: var(--muted); }
+.emoji-opt {
+  font-size: 22px; cursor: pointer; padding: 4px 6px; border-radius: 8px;
+  border: 2px solid transparent; transition: border-color 0.15s;
+}
+.emoji-opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.emoji-opt:hover { background: var(--surface2); }
+.stat-mini { background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px; text-align: center; }
+.stat-mini-num { font-size: 24px; font-weight: 800; color: var(--purple); }
+.stat-mini-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.filter-chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 13px; font-weight: 500; }
+.filter-chip.active { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); }
 </style>
 <script src="/js/api.js"></script>
 </head>
@@ -787,6 +828,9 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
     </div>
     <div class="nav-item" onclick="showPage('rewards')">
       <span class="ni-icon">🎁</span> Ödüller
+    </div>
+    <div class="nav-item" onclick="showPage('books')">
+      <span class="ni-icon">📚</span> Kitaplık
     </div>
     <div class="nav-item" onclick="showPage('report')">
       <span class="ni-icon">📈</span> Raporlar
@@ -1044,6 +1088,96 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
       </div>
     </div>
 
+    <!-- ── KİTAPLIK ── -->
+    <div class="page" id="page-books">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <h2 style="margin:0;font-size:20px;font-weight:700">📚 Kitaplık</h2>
+        <button class="btn btn-primary btn-sm" onclick="openBookModal()">+ Kitap Ekle</button>
+      </div>
+
+      <!-- Çocuk filtre seçici -->
+      <div id="books-child-filter" style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap"></div>
+
+      <!-- İstatistik kartları -->
+      <div id="books-stats-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px"></div>
+
+      <!-- Kitap listesi -->
+      <div id="books-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+        <div style="text-align:center;padding:40px;opacity:0.5;grid-column:1/-1">⏳ Yükleniyor...</div>
+      </div>
+    </div>
+
+    <!-- Kitap Ekle/Düzenle Modal -->
+    <div id="book-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:16px">
+      <div style="background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <h3 id="book-modal-title" style="margin:0;font-size:18px;font-weight:700">📚 Yeni Kitap</h3>
+          <button onclick="closeBookModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+        </div>
+
+        <input type="hidden" id="book-edit-id">
+
+        <div style="display:grid;gap:14px">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">KİTAP ADI *</label>
+            <input id="book-title" class="form-input" placeholder="Örn: Küçük Prens" style="width:100%;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">YAZAR</label>
+            <input id="book-author" class="form-input" placeholder="Örn: Antoine de Saint-Exupéry" style="width:100%;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">YAYINEVİ</label>
+            <input id="book-publisher" class="form-input" placeholder="Örn: Can Yayınları" style="width:100%;box-sizing:border-box">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">SAYFA SAYISI</label>
+              <input id="book-pages" class="form-input" type="number" min="0" placeholder="0" style="width:100%;box-sizing:border-box">
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">KAÇ DEFA OKUNDU</label>
+              <input id="book-readcount" class="form-input" type="number" min="0" placeholder="0" style="width:100%;box-sizing:border-box">
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">HANGİ ÇOCUK İÇİN</label>
+            <select id="book-child" class="form-input" style="width:100%;box-sizing:border-box">
+              <option value="">Tüm aile</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">KAPAK EMOJİ</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap" id="book-emoji-picker">
+              <span class="emoji-opt selected" onclick="selectBookEmoji(this,'📖')">📖</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'📚')">📚</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'📕')">📕</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'📗')">📗</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'📘')">📘</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'📙')">📙</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'🧸')">🧸</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'🦁')">🦁</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'🌟')">🌟</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'🚀')">🚀</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'🐉')">🐉</span>
+              <span class="emoji-opt" onclick="selectBookEmoji(this,'🧙')">🧙</span>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">NOT</label>
+            <textarea id="book-notes" class="form-input" placeholder="Varsa notunuz..." rows="2" style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
+          </div>
+        </div>
+
+        <div id="book-modal-error" style="display:none;color:var(--coral);font-size:13px;margin-top:12px;padding:8px;background:rgba(255,100,100,0.1);border-radius:8px"></div>
+
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-ghost" onclick="closeBookModal()" style="flex:1">İptal</button>
+          <button class="btn btn-primary" id="book-save-btn" onclick="saveBook()" style="flex:2">💾 Kaydet</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ── REPORT ── -->
     <div class="page" id="page-report">
       <div style="display:flex;gap:8px;margin-bottom:24px">
@@ -1233,11 +1367,11 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const navMap = {dashboard:0,approvals:1,tasks:2,calendar:3,rewards:4,report:5};
+  const navMap = {dashboard:0,approvals:1,tasks:2,calendar:3,rewards:4,books:5,report:6};
   const idx = navMap[id];
   document.querySelectorAll('.nav-item')[idx]?.classList.add('active');
   const titles = {dashboard:'Genel Özet',approvals:'Onaylar',tasks:'Görev Yöneticisi',
-    calendar:'Haftalık Takvim',rewards:'Ödül Kataloğu',report:'Raporlar & Analiz',
+    calendar:'Haftalık Takvim',rewards:'Ödül Kataloğu',books:'Kitaplık',report:'Raporlar & Analiz',
     family:'Aile Yönetimi',profile:'Profil Ayarları'};
   document.getElementById('page-title').textContent = titles[id]||id;
   currentPage = id;
@@ -1247,6 +1381,7 @@ function showPage(id) {
   if(id==='tasks')     loadAndRenderTasks();
   if(id==='calendar')  renderCalendar();
   if(id==='rewards')   loadAndRenderRewards();
+  if(id==='books')     loadAndRenderBooks();
   if(id==='report')    loadAndRenderReport();
   if(id==='family')    renderFamilyPage();
   if(id==='profile')   renderProfilePage();
@@ -2915,6 +3050,206 @@ function updatePushStatusBar() {
   };
   const [text, color] = map[s] || map.default;
   bar.textContent = text; bar.style.color = color;
+}
+
+// ── KİTAPLIK ──
+let booksData = [];
+let booksFilterChild = null;
+let selectedBookEmoji = '📖';
+
+async function loadAndRenderBooks() {
+  try {
+    booksData = await BooksAPI.list();
+    renderBookStats();
+    renderBookFilter();
+    renderBookList();
+  } catch(e) {
+    document.getElementById('books-list').innerHTML =
+      `<div style="text-align:center;padding:40px;opacity:0.5;grid-column:1/-1">❌ Kitaplar yüklenemedi</div>`;
+  }
+}
+
+function renderBookStats() {
+  const total      = booksData.length;
+  const totalReads = booksData.reduce((s,b)=>s+b.read_count,0);
+  const totalPages = booksData.reduce((s,b)=>s+(b.page_count*b.read_count),0);
+  const el = document.getElementById('books-stats-row');
+  el.innerHTML = `
+    <div class="stat-mini"><div class="stat-mini-num">${total}</div><div class="stat-mini-lbl">Toplam Kitap</div></div>
+    <div class="stat-mini"><div class="stat-mini-num">${totalReads}</div><div class="stat-mini-lbl">Toplam Okuma</div></div>
+    <div class="stat-mini"><div class="stat-mini-num">${totalPages.toLocaleString('tr-TR')}</div><div class="stat-mini-lbl">Okunan Sayfa</div></div>
+  `;
+}
+
+function renderBookFilter() {
+  const el = document.getElementById('books-child-filter');
+  const chips = [`<span class="filter-chip ${booksFilterChild===null?'active':''}" onclick="setBookFilter(null)">📚 Tümü</span>`];
+  childrenData.forEach(c => {
+    chips.push(`<span class="filter-chip ${booksFilterChild===c.id?'active':''}" onclick="setBookFilter(${c.id})">${c.avatar||'👤'} ${c.name}</span>`);
+  });
+  el.innerHTML = chips.join('');
+}
+
+function setBookFilter(childId) {
+  booksFilterChild = childId;
+  renderBookFilter();
+  renderBookList();
+}
+
+function renderBookList() {
+  const el = document.getElementById('books-list');
+  const filtered = booksFilterChild
+    ? booksData.filter(b => b.child_id === booksFilterChild)
+    : booksData;
+
+  if (!filtered.length) {
+    el.innerHTML = `<div style="text-align:center;padding:60px;opacity:0.5;grid-column:1/-1">
+      <div style="font-size:48px;margin-bottom:12px">📚</div>
+      <div>Henüz kitap eklenmemiş</div>
+      <div style="font-size:12px;margin-top:6px">Sağ üstten "Kitap Ekle" butonuna tıklayın</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(b => {
+    const childName = b.child_name ? `${b.child_avatar||'👤'} ${b.child_name}` : '📚 Tüm aile';
+    const starRow   = b.read_count >= 5 ? '⭐'.repeat(Math.min(5,Math.floor(b.read_count/2))) : '';
+    return `
+    <div class="book-card">
+      <div class="book-cover">${b.cover_emoji||'📖'}</div>
+      <div>
+        <div class="book-title">${escHtml(b.title)}</div>
+        ${b.author ? `<div class="book-meta">✍️ ${escHtml(b.author)}</div>` : ''}
+        ${b.publisher ? `<div class="book-meta">🏢 ${escHtml(b.publisher)}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${b.page_count ? `<span class="book-chip">📄 ${b.page_count} sayfa</span>` : ''}
+        <span class="book-chip">${childName}</span>
+        ${starRow ? `<span class="book-chip">${starRow}</span>` : ''}
+      </div>
+      <div class="book-read-control">
+        <span style="font-size:13px;color:var(--muted);flex:1">Kaç defa okundu?</span>
+        <button onclick="changeReadCount(${b.id},-1)" title="Azalt">−</button>
+        <span class="book-read-count" id="rc-${b.id}">${b.read_count}</span>
+        <button onclick="changeReadCount(${b.id},+1)" title="Artır">+</button>
+      </div>
+      ${b.notes ? `<div style="font-size:12px;color:var(--muted);font-style:italic">"${escHtml(b.notes)}"</div>` : ''}
+      <div class="book-actions">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="openBookModal(${b.id})">✏️ Düzenle</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--coral)" onclick="deleteBook(${b.id},'${escHtml(b.title)}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function changeReadCount(bookId, delta) {
+  try {
+    const res = await BooksAPI.updateCount(bookId, delta);
+    const el = document.getElementById('rc-'+bookId);
+    if (el) el.textContent = res.read_count;
+    const book = booksData.find(b=>b.id===bookId);
+    if (book) book.read_count = res.read_count;
+    renderBookStats();
+  } catch(e) { showToast('❌','Güncelleme başarısız'); }
+}
+
+function openBookModal(bookId) {
+  const modal = document.getElementById('book-modal');
+  modal.style.display = 'flex';
+  document.getElementById('book-modal-error').style.display = 'none';
+
+  // Çocuk seçeneklerini doldur
+  const sel = document.getElementById('book-child');
+  sel.innerHTML = '<option value="">Tüm aile</option>' +
+    childrenData.map(c=>`<option value="${c.id}">${c.avatar||'👤'} ${c.name}</option>`).join('');
+
+  if (bookId) {
+    const b = booksData.find(x=>x.id===bookId);
+    if (!b) return;
+    document.getElementById('book-modal-title').textContent = '✏️ Kitabı Düzenle';
+    document.getElementById('book-edit-id').value  = b.id;
+    document.getElementById('book-title').value    = b.title;
+    document.getElementById('book-author').value   = b.author||'';
+    document.getElementById('book-publisher').value= b.publisher||'';
+    document.getElementById('book-pages').value    = b.page_count||0;
+    document.getElementById('book-readcount').value= b.read_count||0;
+    document.getElementById('book-notes').value    = b.notes||'';
+    sel.value = b.child_id||'';
+    selectBookEmoji(null, b.cover_emoji||'📖');
+  } else {
+    document.getElementById('book-modal-title').textContent = '📚 Yeni Kitap';
+    document.getElementById('book-edit-id').value  = '';
+    document.getElementById('book-title').value    = '';
+    document.getElementById('book-author').value   = '';
+    document.getElementById('book-publisher').value= '';
+    document.getElementById('book-pages').value    = '';
+    document.getElementById('book-readcount').value= '0';
+    document.getElementById('book-notes').value    = '';
+    sel.value = '';
+    selectBookEmoji(null,'📖');
+  }
+}
+
+function closeBookModal() {
+  document.getElementById('book-modal').style.display = 'none';
+}
+
+function selectBookEmoji(el, emoji) {
+  selectedBookEmoji = emoji;
+  document.querySelectorAll('#book-emoji-picker .emoji-opt').forEach(e=>{
+    e.classList.toggle('selected', e.textContent===emoji);
+  });
+}
+
+async function saveBook() {
+  const btn  = document.getElementById('book-save-btn');
+  const errEl= document.getElementById('book-modal-error');
+  errEl.style.display='none';
+
+  const title = document.getElementById('book-title').value.trim();
+  if (!title) { errEl.textContent='Kitap adı zorunlu'; errEl.style.display='block'; return; }
+
+  const payload = {
+    title,
+    author:      document.getElementById('book-author').value.trim(),
+    publisher:   document.getElementById('book-publisher').value.trim(),
+    page_count:  parseInt(document.getElementById('book-pages').value)||0,
+    read_count:  parseInt(document.getElementById('book-readcount').value)||0,
+    notes:       document.getElementById('book-notes').value.trim(),
+    child_id:    document.getElementById('book-child').value || null,
+    cover_emoji: selectedBookEmoji,
+  };
+
+  btn.disabled=true; btn.textContent='Kaydediliyor...';
+  try {
+    const editId = document.getElementById('book-edit-id').value;
+    if (editId) {
+      await BooksAPI.update(editId, payload);
+      showToast('✅','Kitap güncellendi');
+    } else {
+      await BooksAPI.add(payload);
+      showToast('📚','Kitap eklendi!');
+    }
+    closeBookModal();
+    await loadAndRenderBooks();
+  } catch(e) {
+    errEl.textContent = e.message||'Kayıt başarısız'; errEl.style.display='block';
+  } finally {
+    btn.disabled=false; btn.textContent='💾 Kaydet';
+  }
+}
+
+async function deleteBook(id, title) {
+  if (!confirm(`"${title}" kitabını silmek istediğinize emin misiniz?`)) return;
+  try {
+    await BooksAPI.delete(id);
+    showToast('🗑','Kitap silindi');
+    await loadAndRenderBooks();
+  } catch(e) { showToast('❌','Silinemedi: '+e.message); }
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── MOBİL MENÜ ──
