@@ -23,6 +23,7 @@ app.use('/api/completions', require('./routes/completions'));
 app.use('/api/rewards',     require('./routes/rewards'));
 app.use('/api/reports',     require('./routes/reports'));
 app.use('/api/push',        require('./routes/push').router);
+app.use('/api/books',       require('./routes/books'));
 
 // ── OTOMATİK BİLDİRİM HOOK'LARI ──
 // Completion onaylanınca çocuğa bildirim gönder
