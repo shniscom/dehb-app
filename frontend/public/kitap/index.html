@@ -51,8 +51,8 @@ v.innerHTML=`<div class="cards"><div class="cd"><b>${B.length}</b>Toplam kitap</
 v.querySelectorAll('[data-a]').forEach(e=>e.onclick=()=>{F={q:'',st:'all',s:'',a:e.dataset.a};tab='lib';render()});v.querySelectorAll('[data-s]').forEach(e=>e.onclick=()=>{F={q:'',st:'all',a:'',s:e.dataset.s};tab='lib';render()})}
 else if(tab=='add'){v.innerHTML=`<h3>Yeni kitap ekle</h3>${[['t','Kitap adı *'],['a','Yazar'],['s','Seri'],['pub','Yayınevi'],['pg','Sayfa sayısı'],['n','Adet']].map(x=>`<label>${x[1]}</label><input id="n_${x[0]}" ${x[0]=='pg'||x[0]=='n'?'type="number" inputmode="numeric"':''} value="${x[0]=='n'?1:''}">`).join('')}<button id="addb">Kitaplığa ekle</button>`;
 $('#addb').onclick=()=>{const t=$('#n_t').value.trim();if(!t)return toast('Kitap adı gerekli');B.push({id:'b'+Date.now(),t,a:$('#n_a').value.trim()||'Yazar belirtilmemiş',s:$('#n_s').value.trim(),pub:$('#n_pub').value.trim(),pg:$('#n_pg').value,n:+$('#n_n').value||1,ed:'',sum:'',cover:'',read:false,out:null,log:[]});save();toast('Eklendi');tab='lib';F={q:'',st:'all',s:'',a:''};render()}}
-else{v.innerHTML=`<h3>Bilgileri toplu getir</h3><p class="lg">Google Books'tan eksik sayfa sayısı, yayınevi, özet ve kapakları doldurur. Elle girdiklerini değiştirmez. İnternet gerekir; birkaç dakika sürer, sayfayı kapatma. Yanlış eşleşme olursa kitabın içinden düzeltebilirsin.</p><button id="bulk">🔎 Tümünü getir</button><div class="lg" id="pr"></div><h3>Yedekle / Geri yükle</h3><p class="lg">Veriler bu telefondaki tarayıcıda saklanır. Tarayıcı verisini silersen kaybolur; ara sıra aşağıdaki metni kopyalayıp bir yere kaydet.</p><button id="ex">Yedek metnini oluştur</button><textarea id="bx" rows="8" placeholder="Yedek metni burada görünür / geri yüklemek için buraya yapıştır"></textarea><button class="g" id="im">Yapıştırılan yedeği geri yükle</button>`;
-$('#bulk').onclick=bulk;$('#ex').onclick=()=>{$('#bx').value=JSON.stringify(B);$('#bx').select()};$('#im').onclick=()=>{try{const d=JSON.parse($('#bx').value);if(!Array.isArray(d))throw 0;B=d;save();toast('Geri yüklendi')}catch(e){toast('Geçersiz yedek')}}}}
+else{v.innerHTML=`<h3>Bilgileri toplu getir</h3><p class="lg">Google Books'tan eksik sayfa sayısı, yayınevi, özet ve kapakları doldurur. Elle girdiklerini değiştirmez. İnternet gerekir; birkaç dakika sürer, sayfayı kapatma. Yanlış eşleşme olursa kitabın içinden düzeltebilirsin.</p><label>Google API anahtarı (isteğe bağlı)</label><input id="gk" placeholder="AIza…"><button id="bulk">🔎 Tümünü getir</button><div class="lg" id="pr"></div><h3>Yedekle / Geri yükle</h3><p class="lg">Veriler bu telefondaki tarayıcıda saklanır. Tarayıcı verisini silersen kaybolur; ara sıra aşağıdaki metni kopyalayıp bir yere kaydet.</p><button id="ex">Yedek metnini oluştur</button><textarea id="bx" rows="8" placeholder="Yedek metni burada görünür / geri yüklemek için buraya yapıştır"></textarea><button class="g" id="im">Yapıştırılan yedeği geri yükle</button>`;
+$('#gk').value=localStorage.getItem('gbkey')||'';$('#gk').onchange=e=>localStorage.setItem('gbkey',e.target.value.trim());$('#bulk').onclick=bulk;$('#ex').onclick=()=>{$('#bx').value=JSON.stringify(B);$('#bx').select()};$('#im').onclick=()=>{try{const d=JSON.parse($('#bx').value);if(!Array.isArray(d))throw 0;B=d;save();toast('Geri yüklendi')}catch(e){toast('Geçersiz yedek')}}}}
 function dlg(id){const b=B.find(x=>x.id==id);if(!b)return;const sh=$('#sh');
 const fld=(k,l,ty)=>`<label>${l}</label><input data-k="${k}" ${ty?'type="'+ty+'"':''} value="${esc(b[k])}">`;
 sh.innerHTML=`<div style="text-align:right"><button class="g" id="x">Kapat ✕</button></div>${b.cover?`<img class="cv" src="${b.cover}">`:`<div class="cv">📖</div>`}<div style="text-align:center;margin-bottom:10px"><label class="g" style="display:inline-block;border:1px solid var(--bd);padding:8px 12px;border-radius:10px">📷 Kapak fotoğrafı ekle<input id="cf" type="file" accept="image/*" style="display:none"></label></div>
@@ -64,7 +64,7 @@ ${fld('t','Kitap adı')}${fld('a','Yazar')}${fld('s','Seri')}${fld('pub','Yayın
 ${b.log.length?'<h4>Geçmiş</h4>'+b.log.slice().reverse().map(l=>`<div class="lg">${fd(l.d)} – ${esc(l.m)}</div>`).join(''):''}<br><button class="r" id="del">Kitabı sil</button>`;
 $('#dlg').classList.add('s');const up=()=>{save();list&&tab=='lib'&&list()};
 sh.querySelectorAll('[data-k]').forEach(i=>i.onchange=()=>{b[i.dataset.k]=i.type=='number'&&i.dataset.k=='n'?(+i.value||1):i.value;up()});
-$('#gb').onclick=async()=>{toast('Aranıyor…');try{toast(await gb(b)?'Bilgiler eklendi':'Eşleşme bulunamadı');save();dlg(id)}catch(e){toast('Bağlantı hatası veya istek sınırı')}};$('#x').onclick=()=>{$('#dlg').classList.remove('s');render()};
+$('#gb').onclick=async()=>{toast('Aranıyor…');try{toast(await gb(b)?'Bilgiler eklendi':'Eşleşme bulunamadı');save();dlg(id)}catch(e){alert(e.message)}};$('#x').onclick=()=>{$('#dlg').classList.remove('s');render()};
 $('#rd').onchange=e=>{b.read=e.target.checked;up()};
 const g=$('#giv');if(g)g.onclick=()=>{const w=$('#who').value.trim(),d=$('#dd').value||today();b.out={who:w,date:d};b.log.push({d,m:'Verildi'+(w?' ('+w+')':'')});up();dlg(id)};
 const r=$('#ret');if(r)r.onclick=()=>{const d=$('#dd').value||today();b.log.push({d,m:'Kitaplığa geri konuldu'});b.out=null;up();dlg(id)};
@@ -73,9 +73,10 @@ $('#cf').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image(
 document.addEventListener('click',e=>{const r=e.target.closest('.row');if(r&&tab=='lib')dlg(r.dataset.id);const n=e.target.closest('nav button');if(n){tab=n.dataset.t;render()}});
 
 const nz=s=>String(s||'').toLocaleLowerCase('tr').replace(/[^a-zçğıöşü0-9 ]/g,'').trim();
+const kk=()=>{try{const k=localStorage.getItem('gbkey');return k?'&key='+encodeURIComponent(k):''}catch(e){return ''}};
 async function q1(b,withA){const ya=withA&&b.a&&b.a!='Yazar belirtilmemiş'?'+inauthor:'+encodeURIComponent(b.a):'';
-const r=await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=8&langRestrict=tr&q=intitle:'+encodeURIComponent(b.t)+ya);
-if(r.status==429)throw new Error('limit');if(!r.ok)return null;const d=await r.json();
+let r;try{r=await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=8&q=intitle:'+encodeURIComponent(b.t)+ya+kk())}catch(e){throw new Error('Bağlantı kurulamadı (Failed to fetch). Hosting güvenlik ayarı (CSP), reklam engelleyici veya internet kaynaklı olabilir.')}
+if(!r.ok){let m='';try{m=(await r.json()).error.message}catch(e){}throw new Error('Google yanıtı: HTTP '+r.status+' '+m)}const d=await r.json();
 return (d.items||[]).map(x=>x.volumeInfo).filter(x=>x&&nz(x.title).includes(nz(b.t)))[0]||null}
 async function gb(b){let v=await q1(b,true);if(!v)v=await q1(b,false);if(!v)return false;let c=0;
 if(!+b.pg&&v.pageCount){b.pg=v.pageCount;c++}if(!b.pub&&v.publisher){b.pub=v.publisher;c++}
@@ -83,7 +84,7 @@ if(!b.sum&&v.description){b.sum=v.description.replace(/<[^>]+>/g,' ').replace(/\
 const im=v.imageLinks&&(v.imageLinks.thumbnail||v.imageLinks.smallThumbnail);if(!b.cover&&im){b.cover=im.replace('http:','https:').replace('&edge=curl','');c++}
 return c>0}
 async function bulk(){const T=B.filter(b=>!+b.pg||!b.sum||!b.cover),p=$('#pr');let ok=0,i=0;
-for(const b of T){i++;p.textContent=i+'/'+T.length+' işleniyor… bulunan: '+ok;try{if(await gb(b))ok++}catch(e){if(e.message=='limit'){p.textContent='Google istek sınırına ulaşıldı. Bir süre sonra tekrar bas. Bulunan: '+ok;save();return}}
+for(const b of T){i++;p.textContent=i+'/'+T.length+' işleniyor… bulunan: '+ok;try{if(await gb(b))ok++}catch(e){p.textContent='Durdu: '+e.message+' (bulunan: '+ok+')';save();return}
 if(i%5==0)save();await new Promise(r=>setTimeout(r,400))}save();p.textContent='Bitti. '+ok+' kitap için bilgi bulundu. Bulunamayanları elle girebilirsin.'}
 render();
 </script></body></html>
