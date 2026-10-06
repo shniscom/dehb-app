@@ -72,19 +72,26 @@ $('#del').onclick=()=>{if(confirm('Bu kitap silinsin mi?')){B=B.filter(x=>x!=b);
 $('#cf').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const k=260/im.width,c=document.createElement('canvas');c.width=260;c.height=Math.round(im.height*Math.min(k,2));c.getContext('2d').drawImage(im,0,0,c.width,c.height);b.cover=c.toDataURL('image/jpeg',.7);up();dlg(id)};im.src=u}}
 document.addEventListener('click',e=>{const r=e.target.closest('.row');if(r&&tab=='lib')dlg(r.dataset.id);const n=e.target.closest('nav button');if(n){tab=n.dataset.t;render()}});
 
-const nz=s=>String(s||'').toLocaleLowerCase('tr').replace(/[^a-zçğıöşü0-9 ]/g,'').trim();
+const nz=s=>String(s||'').toLocaleLowerCase('tr').replace(/[çğıöşü]/g,c=>({'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u'}[c])).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 const kk=()=>{try{const k=localStorage.getItem('gbkey');return k?'&key='+encodeURIComponent(k):''}catch(e){return ''}};
-async function q1(b,withA){const ya=withA&&b.a&&b.a!='Yazar belirtilmemiş'?'+inauthor:'+encodeURIComponent(b.a):'';
-let r;try{r=await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=8&q=intitle:'+encodeURIComponent(b.t)+ya+kk())}catch(e){throw new Error('Bağlantı kurulamadı (Failed to fetch). Hosting güvenlik ayarı (CSP), reklam engelleyici veya internet kaynaklı olabilir.')}
-if(!r.ok){let m='';try{m=(await r.json()).error.message}catch(e){}throw new Error('Google yanıtı: HTTP '+r.status+' '+m)}const d=await r.json();
-return (d.items||[]).map(x=>x.volumeInfo).filter(x=>x&&nz(x.title).includes(nz(b.t)))[0]||null}
-async function gb(b){let v=await q1(b,true);if(!v)v=await q1(b,false);if(!v)return false;let c=0;
+const sl=ms=>new Promise(r=>setTimeout(r,ms));
+async function ask(q){for(let i=0;i<4;i++){let r;try{r=await fetch('https://www.googleapis.com/books/v1/volumes?maxResults=10&q='+q+kk())}catch(e){throw new Error('Bağlantı kurulamadı (Failed to fetch).')}
+if(r.ok){const d=await r.json();return (d.items||[]).map(x=>x.volumeInfo).filter(Boolean)}
+if((r.status==429||r.status>=500)&&i<3){await sl(1500*Math.pow(2,i));continue}
+let m='';try{m=(await r.json()).error.message}catch(e){}const e=new Error('Google yanıtı: HTTP '+r.status+' '+m);e.st=r.status;throw e}}
+const sc=(b,v)=>{const w=nz(b.t).split(' ').filter(x=>x.length>1),h=' '+nz((v.title||'')+' '+(v.subtitle||''))+' ';return w.length?w.filter(x=>h.includes(' '+x)).length/w.length:0};
+async function gb(b){const t=encodeURIComponent(b.t),has=b.a&&b.a!='Yazar belirtilmemiş',Q=[];
+if(has)Q.push('intitle:'+t+'+inauthor:'+encodeURIComponent(b.a));Q.push('intitle:'+t);Q.push(t+(has?'+'+encodeURIComponent(b.a.split(' ').pop()):''));
+let v=null;for(const q of Q){const L=await ask(q);let best=0;v=null;for(const x of L){const s=sc(b,x);if(s>best){best=s;v=x}}if(best>=0.7)break;v=null;await sl(300)}
+if(!v)return false;let c=0;
 if(!+b.pg&&v.pageCount){b.pg=v.pageCount;c++}if(!b.pub&&v.publisher){b.pub=v.publisher;c++}
 if(!b.sum&&v.description){b.sum=v.description.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();c++}
 const im=v.imageLinks&&(v.imageLinks.thumbnail||v.imageLinks.smallThumbnail);if(!b.cover&&im){b.cover=im.replace('http:','https:').replace('&edge=curl','');c++}
 return c>0}
-async function bulk(){const T=B.filter(b=>!+b.pg||!b.sum||!b.cover),p=$('#pr');let ok=0,i=0;
-for(const b of T){i++;p.textContent=i+'/'+T.length+' işleniyor… bulunan: '+ok;try{if(await gb(b))ok++}catch(e){p.textContent='Durdu: '+e.message+' (bulunan: '+ok+')';save();return}
-if(i%5==0)save();await new Promise(r=>setTimeout(r,400))}save();p.textContent='Bitti. '+ok+' kitap için bilgi bulundu. Bulunamayanları elle girebilirsin.'}
+async function bulk(){const T=B.filter(b=>!+b.pg||!b.sum||!b.cover),p=$('#pr');let ok=0,er=0,nf=0,i=0,ce=0;
+for(const b of T){i++;p.textContent=i+'/'+T.length+' · bulunan: '+ok+' · bulunamayan: '+nf+' · hata: '+er;
+try{if(await gb(b))ok++;else nf++;ce=0}catch(e){er++;ce++;if(e.st==403||e.st==400||ce>=5){p.textContent='Durdu: '+e.message+' (bulunan: '+ok+')';save();return}}
+if(i%5==0)save();await sl(700)}
+save();p.textContent='Bitti. Bulunan: '+ok+', bulunamayan: '+nf+', hata: '+er+'. Hata alanlar için tekrar basabilirsin.'}
 render();
 </script></body></html>
